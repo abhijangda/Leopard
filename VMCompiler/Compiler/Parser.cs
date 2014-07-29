@@ -33,51 +33,6 @@ namespace Compiler
 			symTableTree = new SymbolTable (null);
 		}
 
-		/*public void startParsing2 ()
-		{
-			char c = (char)Console.Read ();
-			string sym_str = c.ToString ();
-
-			while (true)
-			{
-				ActionTable.Action action = g.actionTable.getAction (sym_str, stackStates.Peek ());
-				if (action.type == ActionTable.Action.ActionType.Shift)
-				{
-					stackStates.Push (action.toState);
-					c = (char)Console.Read ();
-					sym_str = c.ToString ();
-				}
-
-				else if (action.type == ActionTable.Action.ActionType.Reduce)
-				{
-					Production p = action.reduceTo;
-					for (int i = 0; i < p.body.Count; i++)
-					{
-						stackStates.Pop ();
-					}
-
-					stackStates.Push (g.gotoTable.getState (p.head.ToString (), stackStates.Peek ()));
-					stackSymbols.Push (p.head);
-				}
-
-				else if (action.type == ActionTable.Action.ActionType.Accept)
-				{
-					Console.WriteLine ("Accepted");
-					break;
-
-				}
-			}
-		}
-
-		public void startParsing3 ()
-		{
-			while (true)
-			{
-				Token t = lexer.scan ();
-				Console.WriteLine (t.ToString ());
-			}
-		}*/
-
 		private ASTNode getNode (Production p, SymbolTable symTable)
 		{
 			if (p.head.ToString () == "type-specifier" &&
@@ -129,7 +84,11 @@ namespace Compiler
 			if (p.head.ToString () == "selection-stmt")
 				return new IfNode ();
 			if (p.head.ToString () == "iteration-stmt")
-				return new WhileNode ();
+			{
+				if (p.body.Count == 5)
+					return new WhileNode ();
+				return new ForNode ();
+			}
 			if (p.head.ToString () == "return-stmt")
 				return new ReturnNode ();
 			if (p.head.ToString () == "break-stmt")
@@ -144,7 +103,11 @@ namespace Compiler
 			    p.head.ToString () == "and-expression" ||
 			    p.head.ToString () == "sum-expression" ||
 			    p.head.ToString () == "unary-expression" ||
-			    p.head.ToString () == "immutable")
+			    p.head.ToString () == "immutable" ||
+			    p.head.ToString () == "rel-expression" ||
+			    p.head.ToString () == "logical-and-expression" ||
+			    p.head.ToString () == "incor-expression" ||
+			    p.head.ToString () == "exor-expression")
 				return new BinaryOperatorNode ();
 
 			if (p.head.ToString () == "unary-rel-expression")
@@ -167,7 +130,6 @@ namespace Compiler
 			sym_str = t.ToString ();
 			SymbolTable currentSymTable = symTableTree;
 			Stack <ASTNode> nodeStack = new Stack<ASTNode> ();
-			SymbolTable paramTable = new SymbolTable ();
 
 			if (t!= null && t.tag == Tag.ID)
 			{
@@ -317,7 +279,9 @@ namespace Compiler
 					}
 
 					if (topNode != null)
+					{
 						nodeStack.Push (topNode);
+					}
 
 					stackStates.Push (g.gotoTable.getState (p.head.ToString (), stackStates.Peek ()));
 					t = null;

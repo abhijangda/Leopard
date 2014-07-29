@@ -1,9 +1,0 @@
-int g ; int a ; int q ;
-int g ( int p ) 
-{ } 
-double f ( int z )
-{ int b ; if ( b ) {
-int c ;
-b = 34.8 + 56 ;
-c = g ( b , 10 ) ;
-} } $

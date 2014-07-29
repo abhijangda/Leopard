@@ -299,37 +299,174 @@ namespace Compiler
 				if (node is TypeNode)
 					castTo = symTable.getType ((TypeNode)node);
 				else if (node is ExpressionNode)
+				{
 					expression = (ExpressionNode)node;
+				}
 			}
 		}
 	}
 
 	public class BinaryOperatorNode : ExpressionNode
 	{
+		public Token op {get; private set;}
+		public ExpressionNode expression1;
+		public ExpressionNode expression2;
+
+		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
+		{
+			foreach (ASTNode node in nodes)
+			{
+				if (node is TokenNode && ((TokenNode)node).token is Word)
+				{
+					op = ((Word)((TokenNode)node).token);
+				}
+				else if (node is ExpressionNode && !(expression1 is ExpressionNode))
+				{
+					expression1 = (ExpressionNode)node;
+				}
+				else if (node is ExpressionNode)
+				{
+					expression2 = (ExpressionNode)node;
+				}
+			}
+		}
 	}
 
 	public class UnaryOperatorNode : ExpressionNode
 	{
+		public Token op {get; private set;}
+		public ExpressionNode expression;
+
+		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
+		{
+			foreach (ASTNode node in nodes)
+			{
+				if (node is TokenNode && ((TokenNode)node).token is Word)
+				{
+					op = ((Word)((TokenNode)node).token);
+				}
+				else if (node is ExpressionNode)
+				{
+					expression = (ExpressionNode)node;
+				}
+			}
+		}
 	}
 
 	public class NewOperatorNode : ExpressionNode
 	{
+		public Type newType {get; private set;}
+		public FunctionCall constructorCall {get; private set;}
+
+		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
+		{
+			foreach (ASTNode node in nodes)
+			{
+				if (node is FunctionCall)
+				{
+					constructorCall = (FunctionCall)node;
+					if (constructorCall.functionToCall is IDNode)
+						newType = symTable.getType (((IDNode)constructorCall.functionToCall).id);
+					else if (constructorCall.functionToCall is MemberAccessNode)
+						newType = symTable.getType (((MemberAccessNode)constructorCall.functionToCall).objectName + "." + 
+						                            ((MemberAccessNode)constructorCall.functionToCall).memberName);
+
+					break;
+				}
+			}
+		}
 	}
 
 	public class IfNode : StatementNode
 	{
+		public StatementNode stmt{get; private set;}
+		public ExpressionNode expression{get; private set;}
+		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
+		{
+			stmt = null;
+			expression = null;
+
+			foreach (ASTNode node in nodes)
+			{
+				if (node is StatementNode)
+					stmt = (StatementNode)node;
+				else if (node is ExpressionNode)
+					expression = (ExpressionNode)node;
+			}
+		}
 	}
 
 	public class WhileNode : StatementNode
 	{
+		public StatementNode stmt{get; private set;}
+		public ExpressionNode expression{get; private set;}
+		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
+		{
+			stmt = null;
+			expression = null;
+
+			foreach (ASTNode node in nodes)
+			{
+				if (node is StatementNode)
+					stmt = (StatementNode)node;
+				else if (node is ExpressionNode)
+					expression = (ExpressionNode)node;
+			}
+		}
 	}
 
+	public class ForNode : StatementNode
+	{
+		public StatementNode stmt{get; private set;}
+		public ExpressionNode initExpression{get; private set;}
+		public ExpressionNode condition{get; private set;}
+		public ExpressionNode increment{get; private set;}
+
+		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
+		{
+			stmt = null;
+			initExpression = null;
+			condition = null;
+			increment = null;
+
+			foreach (ASTNode node in nodes)
+			{
+				if (node is StatementNode)
+					stmt = (StatementNode)node;
+				else if (node is ExpressionNode)
+				{
+					if (initExpression == null)
+						initExpression = (ExpressionNode)node;
+					else if (condition == null)
+						condition = (ExpressionNode)node;
+					else if (increment == null)
+						increment = (ExpressionNode)node;
+				}
+			}
+		}
+	}
 	public class ReturnNode : StatementNode
 	{
+		public ExpressionNode expression {get; private set;}
+
+		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
+		{
+			expression = null;
+
+			foreach (ASTNode node in nodes)
+			{
+				if (node is ExpressionNode)
+				{
+					expression = (ExpressionNode)node;
+					break;
+				}
+			}
+		}
 	}
 
 	public class Break : StatementNode
 	{
+
 	}
 
 	public class CompoundStatementNode : StatementNode

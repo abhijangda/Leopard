@@ -316,7 +316,6 @@ namespace Compiler
 		public static int line = 1;
 		char peek = ' ';
 		Dictionary <string, Word> words;
-		string strLine;
 		int pos;
 		String fileString;
 

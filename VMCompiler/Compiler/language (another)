@@ -1,9 +1,0 @@
-stmts` -> declarationList
-
-declarationList -> expression ';'
-
-expression -> '(' expression ')'
-expression -> 'num'
-expression -> 'ID' '(' arg-list ')'
-arg-list -> arg-list ',' expression
-arg-list -> expression

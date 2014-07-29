@@ -60,7 +60,7 @@ expression-stmt -> expression ';'
 expression-stmt -> ';'
 selection-stmt -> 'if' '(' simple-expression ')' statement
 iteration-stmt -> 'while' '(' simple-expression ')' statement
-iteration-stmt -> 'for' '(' expression-stmt expression-stmt expression ')' statement
+iteration-stmt -> 'for' '(' expression ';' expression ';' expression ')' statement
 return-stmt -> 'return' ';'
 return-stmt -> 'return' expression ';'
 break-stmt -> 'break' ';'
@@ -68,7 +68,7 @@ break-stmt -> 'break' ';'
 expression -> mutable '=' expression
 expression -> simple-expression
 expression -> new-expression
-new-expression -> 'new' 'ID'
+new-expression -> 'new' call
 simple-expression -> incor-expression
 incor-expression -> exor-expression
 incor-expression -> incor-expression '|' exor-expression

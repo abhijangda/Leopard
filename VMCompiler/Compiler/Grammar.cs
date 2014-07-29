@@ -471,7 +471,6 @@ namespace LanguageGrammar
 						//Console.WriteLine (nt);
 						foreach (Production p in dict [nt.ToString ()])
 						{
-							bool present = false;
 							List<Terminal> listFirstTerminal;
 							//Console.WriteLine (p);
 							if (listItem [i].dotAt + 1 < listItem [i].production.body.Count)

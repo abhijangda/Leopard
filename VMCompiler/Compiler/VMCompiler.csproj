@@ -48,6 +48,7 @@
       <DependentUpon>ParseTree.cs</DependentUpon>
     </Compile>
     <Compile Include="CodeGenerator.cs" />
+    <Compile Include="SemanticAnalyzer.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -78,19 +78,6 @@ namespace Compiler
 			dict.Add (w, t);
 		}
 
-		/*public Type getTypeForNode (IDParseNode node)
-		{
-			if (node is NumExprParseNode)
-			{
-				if (node.id.Contains ("."))
-					return Type.Double;
-
-				return Type.Integer;
-			}
-
-			return getType (node.id);
-		}*/
-
 		public Type getType (TypeNode node)
 		{
 			if (node.listNodes [0] is IDNode)
@@ -145,7 +132,7 @@ namespace Compiler
 				{
 					if (symTable.dict.ContainsKey (s))
 					{
-						//return ((StructType)symTable.dict [s]).symTable.getType (w.Substring (w.IndexOf (".") + 1));
+						return ((ClassType)symTable.dict [s]).symTable.getType (w.Substring (w.IndexOf (".") + 1));
 					}
 
 					symTable = symTable.parent;

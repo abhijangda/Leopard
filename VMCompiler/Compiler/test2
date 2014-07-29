@@ -1,3 +1,0 @@
-int g ; int a ; int q ;
-int f ( int z , int j ) { int b ; if ( b ) { int c ; b = 34 + 56.7 ; } } 
-int f2 ( int arg1 , int arg2 ) { } $

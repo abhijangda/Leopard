@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VMCompiler", "Compiler\VMCompiler.csproj", "{873E573B-CB6C-46FC-AC56-9F5A27017FFB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VMAssembler", "VMAssembler\VMAssembler.csproj", "{51DF4058-9A0E-4BB2-87BB-54A1AB9AE278}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{51DF4058-9A0E-4BB2-87BB-54A1AB9AE278}.Debug|x86.ActiveCfg = Debug|x86
+		{51DF4058-9A0E-4BB2-87BB-54A1AB9AE278}.Debug|x86.Build.0 = Debug|x86
+		{51DF4058-9A0E-4BB2-87BB-54A1AB9AE278}.Release|x86.ActiveCfg = Release|x86
+		{51DF4058-9A0E-4BB2-87BB-54A1AB9AE278}.Release|x86.Build.0 = Release|x86
+		{873E573B-CB6C-46FC-AC56-9F5A27017FFB}.Debug|x86.ActiveCfg = Debug|x86
+		{873E573B-CB6C-46FC-AC56-9F5A27017FFB}.Debug|x86.Build.0 = Debug|x86
+		{873E573B-CB6C-46FC-AC56-9F5A27017FFB}.Release|x86.ActiveCfg = Release|x86
+		{873E573B-CB6C-46FC-AC56-9F5A27017FFB}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		StartupItem = Compiler\VMCompiler.csproj
+	EndGlobalSection
+EndGlobal

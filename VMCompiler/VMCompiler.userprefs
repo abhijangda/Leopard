@@ -1,0 +1,20 @@
+﻿<Properties>
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="Compiler/Parser.cs">
+    <Files>
+      <File FileName="Compiler/CodeGenerator.cs" Line="156" Column="22" />
+      <File FileName="Compiler/Program.cs" Line="19" Column="16" />
+      <File FileName="Compiler/Parser.cs" Line="290" Column="71" />
+      <File FileName="Compiler/AbstractSyntaxTree.cs" Line="228" Column="23" />
+      <File FileName="Compiler/SymbolTable.cs" Line="145" Column="26" />
+      <File FileName="Compiler/Lexer.cs" Line="406" Column="24" />
+      <File FileName="Compiler/Grammar.cs" Line="422" Column="6" />
+    </Files>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore>
+      <Breakpoint file="/media/sda11/C#/VMCompiler/Compiler/Parser.cs" line="332" column="1" />
+    </BreakpointStore>
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+</Properties>

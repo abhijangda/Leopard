@@ -1,4 +1,4 @@
 Leopard
 =======
 
-An Object Oriented, Garbage Collection and JIT Language.
+An Imperative, Object Oriented, Strong, Type Safe, Reflective, Garbage Collection and JITed Language.

@@ -1,0 +1,65 @@
+stmts` -> stmts
+stmts -> stmts stmt
+stmts -> stmt
+
+stmt -> exp_stmt
+stmt -> iter_stmt
+stmt -> if_stmt
+stmt -> declaration
+
+iter_stmt -> 'while' '(' exp ')' '{' stmts '}'
+if_stmt -> 'if' '(' exp ')' '{' stmts '}'
+if_stmt -> 'if' '(' exp ')' '{' stmts '}' 'else' '{' stmts '}'
+if_stmt -> 'if' '(' exp ')' '{' stmts '}' 'else' if_stmt
+exp_stmt -> ';' 
+exp_stmt -> exp ';'
+
+func_def -> func_name '{' stmts '}'
+func_name -> type 'ID' '(' arg_list ')'
+arg_list -> type 'ID'
+arg_list -> arg_list ',' type 'ID'
+
+struct_specifier -> 'struct' 'ID' '{' struct_dec_list '}'
+struct_dec_list -> declaration
+struct_dec_list -> struct_dec_list declaration
+
+declaration -> decl ';'
+decl -> type 'ID'
+type -> 'int'
+
+exp -> log_and_exp
+log_or_exp -> log_or_exp '|' log_and_exp
+log_and_exp -> incor_exp
+log_and_exp -> log_and_exp '&&' incor_exp
+incor_exp -> exor_exp
+incor_exp -> incor_exp '|' exor_exp
+exor_exp -> and_exp
+exor_exp -> exor_exp '^' and_exp
+and_exp -> rel_exp
+and_exp -> and_exp '&' rel_exp
+rel_exp -> shift_exp
+rel_exp -> rel_exp rel_op shift_exp
+rel_op -> '>'
+rel_op -> '<'
+rel_op -> '=='
+rel_op -> '!='
+rel_op -> '<='
+rel_op -> '>='
+shift_exp -> add_exp
+shift_exp -> shift_exp '<<' add_exp
+shift_exp -> shift_exp '>>' add_exp
+add_exp -> mult_exp
+add_exp -> add_exp '+' mult_exp
+add_exp -> add_exp '-' mult_exp
+mult_exp -> cast_exp
+mult_exp -> cast_exp '*' mult_exp
+mult_exp -> cast_exp '/' mult_exp
+mult_exp -> cast_exp '%' mult_exp
+cast_exp -> unary_exp
+cast_exp -> '(' type ')' cast_exp
+unary_exp -> array_sub
+unary_exp -> 'ID'
+unary_exp -> unary_op unary_exp
+unary_op -> '!'
+unary_op -> '~'
+array_sub -> 'ID' '[' 'num' ']'

@@ -1,9 +1,0 @@
-class A
-{
-    public static void Main ()
-    {
-        a = 1 + 2;
-    }
-}
-
-$

@@ -1,0 +1,9 @@
+class A
+{
+    public int h;
+    public void s ()
+    {
+    }
+}
+
+$

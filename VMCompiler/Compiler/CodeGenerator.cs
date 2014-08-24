@@ -17,23 +17,7 @@ namespace Compiler
 		public string generate ()
 		{
 			string s = "";
-			Dictionary <string, Type>.Enumerator e = rootSymTable.dict.GetEnumerator ();
-			do
-			{
-				if (e.Current.Value != null)
-				{
-					if (e.Current.Value is FunctionType)
-					{
-						FunctionType ftype = (FunctionType)e.Current.Value;
-						//if (ftype.decl_type == FunctionType.DeclarationType.Declaration)
-						{
-							s += "extern " + e.Current.Key + "\n";
-						}
-					}
-				}
-			}
-			while (e.MoveNext ());
-			string code = s + rootNode.generateCode (rootSymTable);
+
 			return code;
 		}
 	}

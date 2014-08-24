@@ -102,19 +102,16 @@ namespace Compiler
 		}
 	}
 
-	public class ExpressionNode : ASTNode
+	public abstract class ExpressionNode : ASTNode
 	{
+		public abstract Compiler.Type getType (SymbolTable symTable);
 	}
 
 	public class StatementNode : ASTNode
 	{
 	}
 
-	public class ConstantNode : ExpressionNode
-	{
-	}
-
-	public class ArgumentNode : ExpressionNode
+	public abstract class ConstantNode : ExpressionNode
 	{
 	}
 
@@ -157,6 +154,11 @@ namespace Compiler
 				}
 			}
 		}
+
+		public override Type getType (SymbolTable symTable)
+		{
+			return functionToCall.getType (symTable);
+		}
 	}
 
 	public class MemberAccessNode : ExpressionNode
@@ -168,6 +170,11 @@ namespace Compiler
 		{
 			objectName = ((IDNode)nodes[0]).id;
 			memberName = ((IDNode)nodes[2]).id;
+		}
+
+		public override Type getType (SymbolTable symTable)
+		{
+			return ((ClassType)symTable.getType (objectName)).symTable.getType (memberName);
 		}
 	}
 
@@ -187,7 +194,7 @@ namespace Compiler
 			Console.WriteLine ("ID ASTNode id = " + id);
 		}
 
-		public Type getType (SymbolTable symTable)
+		public override Type getType (SymbolTable symTable)
 		{
 			return symTable.getType (id);
 		}
@@ -217,10 +224,10 @@ namespace Compiler
 				Console.WriteLine ("NumExpr value = " + value);
 		}
 
-		public Compiler.Type getType (SymbolTable symTable)
+		public override Compiler.Type getType (SymbolTable symTable)
 		{
 			if (value.Contains ("."))
-				return Type.Double;
+				return Type.Float;
 			return Type.Integer;
 		}
 
@@ -249,7 +256,7 @@ namespace Compiler
 				Console.WriteLine ("Character value = " + value);
 		}
 
-		public Compiler.Type getType (SymbolTable symTable)
+		public override Compiler.Type getType (SymbolTable symTable)
 		{
 			return Type.Character;
 		}
@@ -268,6 +275,11 @@ namespace Compiler
 		{
 			this.value = value;
 		}
+
+		public override Type getType (SymbolTable symTable)
+		{
+			return null;
+		}
 	}
 
 	public class ArrayIndexNode : ExpressionNode
@@ -285,10 +297,16 @@ namespace Compiler
 					index = (ExpressionNode)node; 
 			}
 		}
+
+		public override Type getType (SymbolTable symTable)
+		{
+			return ((ArrayType)symTable.getType (arrayName)).type;
+		}
 	}
 
 	public class CastExpressionNode : ExpressionNode
 	{
+		public string castToString {get; private set;}
 		public Type castTo {get; private set;}
 		public ExpressionNode expression {get; private set;}
 
@@ -297,12 +315,20 @@ namespace Compiler
 			foreach (ASTNode node in nodes)
 			{
 				if (node is TypeNode)
+				{
 					castTo = symTable.getType ((TypeNode)node);
+					castToString = ((IDNode)node.listNodes[0]).id;
+				}
 				else if (node is ExpressionNode)
 				{
 					expression = (ExpressionNode)node;
 				}
 			}
+		}
+
+		public override Type getType (SymbolTable symTable)
+		{
+			return castTo;
 		}
 	}
 
@@ -330,6 +356,11 @@ namespace Compiler
 				}
 			}
 		}
+
+		public override Type getType (SymbolTable symTable)
+		{
+			return Type.max (expression1.getType (symTable), expression1.getType (symTable));
+		}
 	}
 
 	public class UnaryOperatorNode : ExpressionNode
@@ -351,12 +382,18 @@ namespace Compiler
 				}
 			}
 		}
+
+		public override Type getType (SymbolTable symTable)
+		{
+			return expression.getType (symTable);
+		}
 	}
 
 	public class NewOperatorNode : ExpressionNode
 	{
 		public Type newType {get; private set;}
 		public FunctionCall constructorCall {get; private set;}
+		public string newTypeName {get; private set;}
 
 		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
 		{
@@ -366,14 +403,17 @@ namespace Compiler
 				{
 					constructorCall = (FunctionCall)node;
 					if (constructorCall.functionToCall is IDNode)
+					{
 						newType = symTable.getType (((IDNode)constructorCall.functionToCall).id);
-					else if (constructorCall.functionToCall is MemberAccessNode)
-						newType = symTable.getType (((MemberAccessNode)constructorCall.functionToCall).objectName + "." + 
-						                            ((MemberAccessNode)constructorCall.functionToCall).memberName);
-
+					}
 					break;
 				}
 			}
+		}
+
+		public override Type getType (SymbolTable symTable)
+		{
+			return newType;
 		}
 	}
 
@@ -548,16 +588,17 @@ namespace Compiler
 
 	public class ClassDefinitionWithParentNode : ClassDefinitionNode
 	{
-		public Type parent;
+		public IDNode parent {get; private set;}
 		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
 		{
 			base.addNodes (nodes, symTable);
 
 			foreach (ASTNode node in nodes)
 			{
-				if (node is IDNode)
+				if (node is ClassSignatureWithParentNode)
 				{
-					parent = symTable.getType (((IDNode)node).id);
+					parent = ((ClassSignatureWithParentNode)node).parentID;
+					break;
 				}
 			}
 		}
@@ -569,8 +610,10 @@ namespace Compiler
 
 	public class LocalDeclarationNode : ASTNode
 	{
-		public string name {get; private set;}
-		public Type type {get; private set;}
+		public string name {get; protected set;}
+		public Type type {get; protected set;}
+		public string typeName {get; protected set;}
+
 		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
 		{
 			foreach (ASTNode node in nodes)
@@ -580,6 +623,7 @@ namespace Compiler
 				else if (node is TypeNode)
 				{
 					type = symTable.getType ((TypeNode)node);
+					typeName = node.ToString ();
 				}
 			}
 		}
@@ -607,15 +651,8 @@ namespace Compiler
 
 	public class MemberDeclaration : LocalDeclarationNode
 	{
-		public enum AccessSpecifier
-		{
-			Private,
-			Protected,
-			Public,
-		}
-
-		public AccessSpecifier accessSpecifier {get; private set;}
-		public bool isStatic {get; private set;}
+		public AccessSpecifier accessSpecifier {get; protected set;}
+		public bool isStatic {get; protected set;}
 
 		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
 		{
@@ -642,7 +679,65 @@ namespace Compiler
 					}
 				}
 			}
+			type = new MemberType (accessSpecifier, type, isStatic, (ClassType)symTable.parentType);
 		}
+	}
+
+	public class ConstructorDefinition : FunctionDefinition
+	{
+		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
+		{
+			isStatic = false;
+
+			foreach (ASTNode node in nodes[0].listNodes)
+			{
+				if (node is IDNode)
+				{
+					name = ((IDNode)node).id;
+					type = symTable.getClassType (name);
+				}
+				else if (node is TokenNode)
+				{
+					switch (((TokenNode)node).token.tag) 
+					{
+						case Tag.Public:
+						accessSpecifier = AccessSpecifier.Public;
+						break;
+						case Tag.Protected:
+						accessSpecifier = AccessSpecifier.Protected;
+						break;
+						case Tag.Private:
+						accessSpecifier = AccessSpecifier.Private;
+						break;
+						case Tag.Static:
+						isStatic = true;
+						break;
+					}
+				}
+			}
+
+			foreach (ASTNode node in nodes)
+			{
+				if (node is ParameterListNode)
+				{
+					paramList = (ParameterListNode)node;
+				}
+				else if (node is CompoundStatementNode)
+				{
+					compoundStatement = (CompoundStatementNode)node;
+				}
+			}
+
+			type = new ConstructorType (accessSpecifier, type, paramList, symTable, (ClassType)symTable.parent.parentType);
+		}
+	}
+
+	public class ConstructorCall : FunctionCall
+	{
+	}
+
+	public class ConstructorSignature : FunctionSignature
+	{
 	}
 
 	public class MemberDeclarationList : ASTNode
@@ -663,7 +758,7 @@ namespace Compiler
 					}
 				}
 			}
-		}		 
+		}
 	}
 
 	public class FunctionSignature : ASTNode
@@ -674,6 +769,7 @@ namespace Compiler
 	{
 		public ParameterListNode paramList;
 		public CompoundStatementNode compoundStatement;
+
 		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
 		{
 			//Call For FunctionSignature
@@ -683,15 +779,15 @@ namespace Compiler
 				if (node is ParameterListNode)
 				{
 					paramList = (ParameterListNode)node;
-					break;
+				}
+				else if (node is CompoundStatementNode)
+				{
+					compoundStatement = (CompoundStatementNode)node;
 				}
 			}
 
-			foreach (ASTNode node in nodes)
-			{
-				if (node is CompoundStatementNode)
-					compoundStatement = (CompoundStatementNode)node;
-			}
+			type = new FunctionType (((MemberType)type).accessSpecifier, ((MemberType)type).isStatic, 
+			                         ((MemberType)type).type, symTable, paramList, (ClassType)symTable.parent.parentType);
 		}
 	}
 
@@ -705,7 +801,7 @@ namespace Compiler
 
 	public class ClassSignatureNode : ASTNode
 	{
-		public IDNode classID{get; private set;}
+		public IDNode classID{get; protected set;}
 
 		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
 		{
@@ -713,6 +809,27 @@ namespace Compiler
 			{
 				if (node is IDNode)
 					classID = (IDNode)node;
+			}
+		}
+	}
+
+	public class ClassSignatureWithParentNode : ClassSignatureNode
+	{
+		public IDNode parentID {get; private set;}
+
+		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
+		{
+			classID = null;
+			parentID = null;
+			foreach (ASTNode node in nodes)
+			{
+				if (node is IDNode)
+				{
+					if (classID == null)
+						classID = (IDNode)node;
+					else if (parentID == null)
+						parentID = (IDNode)node;
+				}
 			}
 		}
 	}

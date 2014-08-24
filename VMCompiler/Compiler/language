@@ -21,9 +21,10 @@ type-specifier -> 'ID'
 class-definition -> class-signature '{' member-declaration-list '}'
 class-definition -> class-signature '{' '}'
 class-definition -> class-with-parent-definition
-class-with-parent-definition -> class-signature ':' 'ID' '{' member-declaration-list '}'
-class-with-parent-definition -> class-signature ':' 'ID' '{' '}'
+class-with-parent-definition -> class-signature-with-parent '{' member-declaration-list '}'
+class-with-parent-definition -> class-signature-with-parent '{' '}'
 class-signature -> 'class' 'ID'
+class-signature-with-parent -> 'class' 'ID' ':' 'ID'
 member-declaration-list -> member-declaration-list member-declaration
 member-declaration-list -> member-declaration
 member-declaration -> field-declaration
@@ -33,6 +34,12 @@ fun-signature -> access-specifier type-specifier 'ID' '(' ')'
 fun-signature -> access-specifier type-specifier 'ID' '(' param-list ')'
 fun-signature -> access-specifier 'static' type-specifier 'ID' '(' ')'
 fun-signature -> access-specifier 'static' type-specifier 'ID' '(' param-list ')'
+fun-definition -> constructor-definition
+constructor-definition -> constructor-signature compound-stmt
+constructor-signature -> access-specifier 'ID' '(' param-list ')' ':' base-constructor-call
+constructor-signature -> access-specifier 'ID' '(' ')' ':' base-constructor-call
+base-constructor-call -> 'base' '(' ')'
+base-constructor-call -> 'base' '(' param-list ')'
 access-specifier -> 'public'
 access-specifier -> 'private'
 access-specifier -> 'protected'
@@ -68,7 +75,9 @@ break-stmt -> 'break' ';'
 expression -> mutable '=' expression
 expression -> simple-expression
 expression -> new-expression
-new-expression -> 'new' call
+new-expression -> 'new' constructor-call
+constructor-call -> 'ID' '(' arg-list ')'
+constructor-call -> 'ID' '(' ')'
 simple-expression -> incor-expression
 incor-expression -> exor-expression
 incor-expression -> incor-expression '|' exor-expression

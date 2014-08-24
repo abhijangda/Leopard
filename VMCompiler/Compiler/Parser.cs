@@ -16,6 +16,7 @@ namespace Compiler
 		Grammar g;
 		Stack <int> stackStates;
 		public SymbolTable symTableTree;
+		List<CompileError> errors;
 
 		public Parser ()
 		{
@@ -31,6 +32,7 @@ namespace Compiler
 			stackStates.Push (0);
 
 			symTableTree = new SymbolTable (null);
+			errors = new List<CompileError> ();
 		}
 
 		private ASTNode getNode (Production p, SymbolTable symTable)
@@ -48,12 +50,18 @@ namespace Compiler
 				return new ParameterListNode ();
 			if (p.body.Count == 1 && !(p.body [0] is Terminal))
 				return null;
+			if (p.head.ToString () == "constructor-definition")
+				return new ConstructorDefinition ();
+			if (p.head.ToString () == "constructor-signature")
+				return new ConstructorSignature ();
 			if (p.head.ToString () == "cast-expression")
 				return new CastExpressionNode ();
 			if (p.head.ToString () == "param-type-list")
 				return new ParameterNode ();
 			if (p.head.ToString () == "class-signature")
 				return new ClassSignatureNode ();
+			if (p.head.ToString () == "class-signature-with-parent")
+				return new ClassSignatureWithParentNode ();
 			if (p.head.ToString () == "class-with-parent-definition")
 				return new ClassDefinitionWithParentNode ();
 			if (p.head.ToString () == "new-expression")
@@ -112,10 +120,10 @@ namespace Compiler
 
 			if (p.head.ToString () == "unary-rel-expression")
 				return new UnaryOperatorNode ();
-
 			if (p.head.ToString () == "call")
 				return new FunctionCall ();
-
+			if (p.head.ToString () == "constructor-call")
+				return new ConstructorCall ();
 			if (p.head.ToString () == "mutable" && 
 			    p.body.Count == 3)
 				return new ArrayIndexNode ();
@@ -229,19 +237,20 @@ namespace Compiler
 					{
 						nodesToReduce.Reverse ();
 						newNode.addNodes (nodesToReduce, currentSymTable);
-						//typeCheck (currentSymTable, newNode);
 						nodeStack.Push (newNode);
-						
-						if (newNode is FunctionDefinition)
+						//CompileError error;
+						if (newNode is ConstructorDefinition)
+						{
+							currentSymTable = currentSymTable.parent;
+							currentSymTable.dict.Add (((ConstructorDefinition)newNode).name,
+							                          ((ConstructorDefinition)newNode).type);
+						}
+						else if (newNode is FunctionDefinition)
 						{
 							//When definition of function is obtained load the parent symbol table
-							SymbolTable funcSymbolTable = currentSymTable;
 							currentSymTable = currentSymTable.parent;
-							FunctionType classType = new FunctionType (((FunctionDefinition)newNode).type,
-							                                           funcSymbolTable,
-							                                           ((FunctionDefinition)newNode).paramList);
 							currentSymTable.dict.Add (((FunctionDefinition)newNode).name,
-							                          classType);
+							                          ((FunctionDefinition)newNode).type);
 						}
 						else if (newNode is LocalDeclarationNode)
 						{
@@ -260,13 +269,26 @@ namespace Compiler
 							currentSymTable.dict.Add (((FieldDeclaration)newNode).name,
 							                          ((FieldDeclaration)newNode).type);
 						}
+						else if (newNode is ClassSignatureWithParentNode)
+						{
+							SymbolTable classSymbolTable = new SymbolTable (currentSymTable);
+							currentSymTable.children.Add (classSymbolTable);
+							ClassType classType = new ClassType (((ClassSignatureNode)newNode).classID.id,
+							                                     classSymbolTable, 
+							                                     (ClassType)symTableTree.getType (((ClassSignatureWithParentNode)newNode).parentID.id));
+							classSymbolTable.parentType = classType;
+							currentSymTable.dict.Add (((ClassSignatureNode)newNode).classID.id,
+							                          classType);
+							currentSymTable = classSymbolTable;
+						}
 						else if (newNode is ClassSignatureNode)
 						{
 							//New Class is created, create a new class symbol table
 							SymbolTable classSymbolTable = new SymbolTable (currentSymTable);
 							currentSymTable.children.Add (classSymbolTable);
 							ClassType classType = new ClassType (((ClassSignatureNode)newNode).classID.id,
-							                                     classSymbolTable);
+							                                     classSymbolTable, null);
+							classSymbolTable.parentType = classType;
 							currentSymTable.dict.Add (((ClassSignatureNode)newNode).classID.id,
 							                          classType);
 							currentSymTable = classSymbolTable;
@@ -275,6 +297,12 @@ namespace Compiler
 						{
 							//When definition of class is obtained load the parent symbol table
 							currentSymTable = currentSymTable.parent;
+						}
+
+						//if (!SemanticAnalyzer.analyze (newNode, symTableTree, currentSymTable,
+						//                               lexer.line, error))
+						{
+							//errors.Add (error);
 						}
 					}
 

@@ -6,20 +6,41 @@ namespace Compiler
 {
 	public enum Tag
 	{
-		//Quotes
-		DoubleQuotes, SingleQuotes,
+		//Syntax Symbols
+		DoubleQuotes, 
+		SingleQuotes,
 		Comma,
+		StartBrace,
+		EndBrace,
+		StartParenthesis,
+		EndParenthesis,
+		StartBigBracket,
+		EndBigBracket,
+		EndOfLine,
+		Dot, 
+		Colon,
 
 		//Unary Operators
-		UnaryBitwiseNOTOperator, UnaryNOTOperator,
-
+		UnaryBitwiseNOTOperator, 
+		UnaryNOTOperator,
+	
 		//Arithmetic Operator
-		MultiplyOperator, AdditionOperator, SubtractionOperator, DivisionOperator, ModulusOperator,
+		MultiplyOperator,
+		AdditionOperator, 
+		SubtractionOperator,
+		DivisionOperator,
+		ModulusOperator,
+	
 		//BitWise Operator
-		RightShiftOperator, LeftShiftOperator, AndOperator, XOROperator, OROperator, 
+		RightShiftOperator, 
+		LeftShiftOperator,
+		AndOperator,
+		XOROperator,
+		OROperator,
 
 		//Logical Operator
-		LogicalAndOperator, LogicalOROperator, 
+		LogicalAndOperator, 
+		LogicalOROperator, 
 
 		//Conditional Operator
 		EqualityOperator,
@@ -33,33 +54,48 @@ namespace Compiler
 		EqualOperator,
 
 		//Built-in Types
-		Void, Char, Short, Int,	Float, Double, Long,
+		Void,
+		Char,
+		Short,
+		Int,
+		Float,
+		Double,
+		Long,
 
 		//User Defined Types
-		Class, ClassType, 
-
-		//Brackets
-		StartBrace, EndBrace, StartParenthesis, EndParenthesis, StartBigBracket, EndBigBracket,
-
-		EndOfLine,
+		Class, 
+		ClassType, 
 
 		//Conditional Statements
-		If, Else,
+		If,
+		Else,
 
 		//Loops
-		While, Do, For,
+		While,
+		Do,
+		For,
 
-		//Value
-		Number,	Real, String, Character,
+		//Constants
+		Number,
+		Real,
+		String,
+		Character,
 
 		ID,
-
 		DynamicType,
 
-		Return, Break, Continue,
-		Dot,
+		//Other Statements
+		Return, 
+		Break,
+		Continue,
+
 		New,
-		Static, Public, Private, Protected, Colon,
+
+		//Access Modifiers
+		Static, 
+		Public,
+		Private,
+		Protected, 
 	}
 
 	public class Token
@@ -313,7 +349,7 @@ namespace Compiler
 
 	public class Lexer
 	{
-		public static int line = 1;
+		public int line {get; private set;}
 		char peek = ' ';
 		Dictionary <string, Word> words;
 		int pos;
@@ -349,6 +385,7 @@ namespace Compiler
 			//pos = 0;
 			fileString = File.ReadAllText ("./../../test");
 			pos = 0;
+			line = 1;
 		}
 
 		private void reserve (Word w)

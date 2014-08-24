@@ -49,6 +49,7 @@
     </Compile>
     <Compile Include="CodeGenerator.cs" />
     <Compile Include="SemanticAnalyzer.cs" />
+    <Compile Include="CompileError.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

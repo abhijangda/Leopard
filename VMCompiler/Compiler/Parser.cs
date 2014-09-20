@@ -37,9 +37,9 @@ namespace Compiler
 
 		private ASTNode getNode (Production p, SymbolTable symTable)
 		{
-			if (p.head.ToString () == "type-specifier" &&
-			    p.body.Count > 1)
-				return new ArrayTypeNode ();
+			if (p.head.ToString () == "local-array-declaration" &&
+				p.body.Count > 1)
+				return new ArrayDeclarationNode ();
 			if (p.head.ToString () == "type-specifier")
 				return new TypeNode ();
 			if (p.head.ToString () == "arg-list")
@@ -125,7 +125,7 @@ namespace Compiler
 			if (p.head.ToString () == "constructor-call")
 				return new ConstructorCall ();
 			if (p.head.ToString () == "mutable" && 
-			    p.body.Count == 3)
+				p.body.Count == 4)
 				return new ArrayIndexNode ();
 
 			return null;
@@ -319,7 +319,7 @@ namespace Compiler
 				{
 					Console.WriteLine ("peeeking \n");
 					nodeStack.Peek ().travelNode ();
-					symTableTree.print ();
+					//symTableTree.print ();
 					return nodeStack.Peek ();
 				}
 			}

@@ -142,21 +142,6 @@ namespace Compiler
 			{
 				return getType (((IDNode)node.listNodes [0]).id);
 			}
-			else if (node is ArrayTypeNode)
-			{
-				Type type = null;
-				int width = 0;
-				foreach (ASTNode _node in node.listNodes)
-				{
-					if (_node is TypeNode)
-						type = this.getType ((TypeNode)_node);
-					else if (_node is NumExprNode)
-						width = int.Parse (((NumExprNode)_node).value);
-				}
-				if (type == null || width == 0)
-					return null;
-				return new ArrayType (type, width);
-			}
 			else if (node.listNodes [0] is TokenNode)
 			{
 				TokenNode tokenNode = (TokenNode)node.listNodes[0];

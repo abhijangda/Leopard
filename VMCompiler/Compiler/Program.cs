@@ -34,10 +34,9 @@ namespace Compiler
 
 			g.createGoTo ();*/
 			Parser p = new Parser ();
-			p.startParsing ();
-			//InterCodeGen intercodegen = new InterCodeGen (p.startParsing (), p.symTableTree);
-			//string intercode = intercodegen.generate ();
-			//Console.WriteLine ("\n" + intercode + "\n");
+			InterCodeGen intercodegen = new InterCodeGen (p.startParsing (), p.symTableTree);
+			string intercode = intercodegen.generate ();
+			Console.WriteLine ("\n" + intercode + "\n");
 			//Console.WriteLine (new MachineCodeGen (intercode).genMachineCode (p.symTableTree));
 		}
 	}

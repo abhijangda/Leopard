@@ -8,6 +8,7 @@ namespace Compiler
 	{
 		ASTNode rootNode;
 		SymbolTable rootSymTable;
+
 		public InterCodeGen (ASTNode rootNode, SymbolTable symTable)
 		{
 			this.rootNode = rootNode;
@@ -16,9 +17,10 @@ namespace Compiler
 
 		public string generate ()
 		{
+			Console.WriteLine ("Generating Intermediate Code\n");
 			string s = "";
-
-			return code;
+			s += rootNode.generateCode (rootSymTable, rootSymTable, 0).code;
+			return s;
 		}
 	}
 

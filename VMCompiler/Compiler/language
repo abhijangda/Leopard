@@ -6,10 +6,11 @@ class-definition-list -> class-definition
 field-declaration -> access-specifier 'static' type-specifier var-decl-initialize ';'
 field-declaration -> access-specifier type-specifier var-decl-initialize ';'
 local-declaration -> type-specifier var-decl-initialize ';'
+local-declaration -> local-array-declaration
+local-array-declaration -> type-specifier 'ID' '[' 'num' ']' ';'
 var-decl-initialize -> var-decl-id
 var-decl-id -> 'ID'
 
-type-specifier -> type-specifier '[' 'num' ']'
 type-specifier -> 'int'
 type-specifier -> 'double'
 type-specifier -> 'char'
@@ -38,6 +39,8 @@ fun-definition -> constructor-definition
 constructor-definition -> constructor-signature compound-stmt
 constructor-signature -> access-specifier 'ID' '(' param-list ')' ':' base-constructor-call
 constructor-signature -> access-specifier 'ID' '(' ')' ':' base-constructor-call
+constructor-signature -> access-specifier 'ID' '(' ')'
+constructor-signature -> access-specifier 'ID' '(' param-list ')'
 base-constructor-call -> 'base' '(' ')'
 base-constructor-call -> 'base' '(' param-list ')'
 access-specifier -> 'public'
@@ -116,7 +119,7 @@ mulop -> '%'
 unary-expression -> immutable
 unary-expression -> mutable
 mutable -> 'ID'
-mutable -> 'ID' '[' expression ']'
+mutable -> mutable '[' expression ']'
 mutable -> member-access
 member-access -> 'ID' '.' 'ID'
 immutable -> '(' expression ')'

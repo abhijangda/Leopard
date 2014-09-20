@@ -9,7 +9,9 @@ namespace Compiler
 												SymbolTable currentSymTable, int linenumber, 
 												out CompileError error, out Type t)
 		{
+			error = null;
 			t = node.getType (currentSymTable);
+	
 			if (t is MemberType)
 			{
 				if (((MemberType)t).accessSpecifier == AccessSpecifier.Private &&
@@ -68,9 +70,10 @@ namespace Compiler
 					                          linenumber);
 					return false;
 				}
+
 				Type t;
 				if (!analyze_expression (expr.expression, symTableRoot, currentSymTable,
-				                         linenumber, error, t))
+					linenumber, out error, out t))
 					return false;
 			}
 			else if (node is BinaryOperatorNode)
@@ -81,11 +84,11 @@ namespace Compiler
 				Type t2;
 
 				if (!analyze_expression (binOpNode.expression1, symTableRoot, currentSymTable,
-				                         linenumber, error, t1))
+					linenumber, out error, out t1))
 					return false;
 
 				if (!analyze_expression (binOpNode.expression1, symTableRoot, currentSymTable,
-				                         linenumber, error, t2))
+					linenumber, out error, out t2))
 					return false;
 
 				if (t1 != t2)
@@ -98,9 +101,9 @@ namespace Compiler
 			else if (node is UnaryOperatorNode)
 			{
 				Type t;
-
+				UnaryOperatorNode expr = (UnaryOperatorNode)node;
 				if (!analyze_expression (expr.expression, symTableRoot, currentSymTable,
-				                         linenumber, error, t))
+					linenumber, out error, out t))
 					return false;
 				if (!Type.numeric (t))
 				{

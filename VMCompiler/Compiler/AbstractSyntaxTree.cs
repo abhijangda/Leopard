@@ -3,21 +3,42 @@ using System.Collections.Generic;
 
 namespace Compiler
 {
-	public abstract class ASTNode 
+	public class Code
+	{
+		public string code {get; private set;}
+		public string returnExpression {get; private set;}
+
+		public Code (string code, string returnExpression)
+		{
+			this.code = code;
+			this.returnExpression = returnExpression;
+		}
+	}
+
+	public abstract class ASTNode
 	{
 		static int labels = 0;
 		public List <ASTNode> listNodes;
 		protected string currentLabel, endLabel;
 		public static int tempCount = 0;
+		public static SymbolTable tempsSymTable;
+
+		static ASTNode()
+		{
+			tempsSymTable = new SymbolTable ();
+		}
 
 		protected ASTNode ()
 		{
 			listNodes = new List<ASTNode> ();
 		}
-		protected static string getTemporaryName ()
+
+		protected static string getTemporaryName (ExpressionNode expression, SymbolTable symTable)
 		{
 			tempCount += 1;
-			return "t" + tempCount;
+			string temp = "t" + tempCount;
+			tempsSymTable.put (temp, expression.getType (symTable));
+			return temp;
 		}
 
 		public virtual void travelNode (int level = 0)
@@ -64,22 +85,30 @@ namespace Compiler
 			}
 		}
 
-		public virtual string generateCode (SymbolTable symTable)
+		public virtual Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
 		{
 			string s = "";
 			if (listNodes != null)
 			{
 				foreach (ASTNode node in listNodes)
-					s += node.generateCode (symTable);
+					s += node.generateCode (currSymTable, rootSymTable, indent + 1).code;
 			}
 
-			return s;
+			return new Code (s, "");
 		}
 
 		public string generateLabel ()
 		{
 			labels += 1;
 			return "L" + labels.ToString ();
+		}
+
+		public static string getIndentString (int indent)
+		{
+			string s = "";
+			for (int i = 0; i < indent; i++)
+				s += " ";
+			return s;
 		}
 	}
 
@@ -96,9 +125,9 @@ namespace Compiler
 			return token.ToString ();
 		}
 
-		public override string generateCode (SymbolTable symTable)
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
 		{
-			return token.ToString ();
+			return new Code (token.ToString (), "");
 		}
 	}
 
@@ -159,6 +188,36 @@ namespace Compiler
 		{
 			return functionToCall.getType (symTable);
 		}
+
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			Code functoCallCode = functionToCall.generateCode (currSymTable, rootSymTable, 0);
+			string s = "";
+			if (functoCallCode.code != "")
+			{
+				s += functoCallCode.code + "\n";
+			}
+
+			string callCode = "";
+			if (arglist != null && arglist.listNodes != null)
+			{
+				for (int i = 0; i < arglist.listNodes.Count; i++)
+				{
+					ASTNode node = arglist.listNodes[i];
+					Code argCode = node.generateCode (currSymTable, rootSymTable, indent);
+					s += argCode.code + "\n";
+					callCode += getIndentString (indent) + "param " + argCode.returnExpression + "\n";
+				}
+			}
+			string temp = getTemporaryName (functionToCall, currSymTable);
+			Type type = getType (currSymTable);
+			if ((type is FunctionType && ((FunctionType)type).returnType != Type.Void) || (type is ConstructorType))
+				callCode += getIndentString (indent) + temp + " = call " + functoCallCode.returnExpression;
+			else
+				callCode += getIndentString (indent) + "call " + functoCallCode.returnExpression;
+
+			return new Code (s + callCode, temp);
+		}
 	}
 
 	public class MemberAccessNode : ExpressionNode
@@ -175,6 +234,12 @@ namespace Compiler
 		public override Type getType (SymbolTable symTable)
 		{
 			return ((ClassType)symTable.getType (objectName)).symTable.getType (memberName);
+		}
+
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			string temp = getTemporaryName (this, rootSymTable);
+			return new Code ("", objectName + "." + memberName);
 		}
 	}
 
@@ -199,9 +264,9 @@ namespace Compiler
 			return symTable.getType (id);
 		}
 
-		public override string generateCode (SymbolTable symTable)
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
 		{
-			return id;
+			return new Code ("", id);
 		}
 	}
 
@@ -231,9 +296,9 @@ namespace Compiler
 			return Type.Integer;
 		}
 
-		public override string generateCode (SymbolTable symTable)
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
 		{
-			return value;
+			return new Code ("", value);
 		}
 	}
 
@@ -261,9 +326,9 @@ namespace Compiler
 			return Type.Character;
 		}
 
-		public override string generateCode (SymbolTable symTable)
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
 		{
-			return value.ToString ();
+			return new Code ("", "'" + value.ToString () + "'");
 		}
 	}
 
@@ -280,12 +345,18 @@ namespace Compiler
 		{
 			return null;
 		}
+
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			return new Code ("", "\"" + value + "\"");
+		}
 	}
 
 	public class ArrayIndexNode : ExpressionNode
 	{
 		public ExpressionNode index {get; private set;}
 		public string arrayName {get; private set;}
+		public bool isfirst;
 
 		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
 		{
@@ -301,6 +372,18 @@ namespace Compiler
 		public override Type getType (SymbolTable symTable)
 		{
 			return ((ArrayType)symTable.getType (arrayName)).type;
+		}
+
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			string temp = getTemporaryName (this, currSymTable);
+			Code indexCode = index.generateCode (currSymTable, rootSymTable, indent);
+			if (isfirst)
+				return new Code (indexCode.code + "\n" + getIndentString (indent) + 
+					arrayName + "[" + indexCode.returnExpression + "] = " + temp, temp);
+			else
+				return new Code (indexCode.code + "\n" + getIndentString (indent) + 
+					temp + " = " + arrayName + "[" + indexCode.returnExpression + "]", temp);
 		}
 	}
 
@@ -329,6 +412,13 @@ namespace Compiler
 		public override Type getType (SymbolTable symTable)
 		{
 			return castTo;
+		}
+
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			string temp = getTemporaryName (this, rootSymTable);
+			Code code = expression.generateCode (currSymTable, rootSymTable, indent);
+			return new Code (code.code + "\n" + getIndentString (indent) + temp + " = cast (" + castTo + ") " + code.returnExpression, temp);
 		}
 	}
 
@@ -359,7 +449,47 @@ namespace Compiler
 
 		public override Type getType (SymbolTable symTable)
 		{
-			return Type.max (expression1.getType (symTable), expression1.getType (symTable));
+			Type t1 = expression1.getType (symTable);
+			Type t2 = expression1.getType (symTable);
+			return Type.max (t1, t2);
+		}
+
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			if (expression1 is ArrayIndexNode)
+			{
+				((ArrayIndexNode)expression1).isfirst = true && op == Word.Equal;
+			}
+
+			if (expression2 is ArrayIndexNode)
+			{
+				((ArrayIndexNode)expression2).isfirst = false && op == Word.Equal;
+			}
+
+			Code expressionCode1 = expression1.generateCode (currSymTable, rootSymTable, indent);
+			Code expressionCode2 = expression2.generateCode (currSymTable, rootSymTable, indent);
+			string s = "";
+	
+			if (op != Word.Equal && expressionCode1.code != "")
+				s += expressionCode1.code + "\n";
+
+			if (expressionCode2.code != "")
+				s += expressionCode2.code + "\n";
+
+			string temp = "";
+			if (op != Word.Equal)
+			{
+				temp = getTemporaryName (this, currSymTable);
+				s += getIndentString (indent) + temp + " = " + expressionCode1.returnExpression + " " + op.ToString () + " " + expressionCode2.returnExpression;
+			}
+			else
+			{
+				s += getIndentString (indent) + expressionCode1.returnExpression + " = " + expressionCode2.returnExpression;
+				if (op == Word.Equal && expression1 is ArrayIndexNode && expressionCode1.code != "")
+					s += expressionCode1.code + "\n";
+			}
+
+			return new Code (s, temp);
 		}
 	}
 
@@ -415,6 +545,13 @@ namespace Compiler
 		{
 			return newType;
 		}
+
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			Code constructorCode = constructorCall.generateCode (currSymTable, rootSymTable, indent);
+			return new Code (getIndentString (indent) + constructorCode.returnExpression + " = new " + newType.ToString () + "\n" + 
+				getIndentString (indent) + "param " + constructorCode.returnExpression + "\n" + constructorCode.code, constructorCode.returnExpression);
+		}
 	}
 
 	public class IfNode : StatementNode
@@ -453,6 +590,24 @@ namespace Compiler
 					expression = (ExpressionNode)node;
 			}
 		}
+
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			Code expressionCode = expression.generateCode (currSymTable, rootSymTable, indent);
+			Code statementCode = stmt.generateCode (currSymTable, rootSymTable, indent);
+
+			currentLabel = generateLabel ();
+			endLabel = generateLabel ();
+
+			string s = getIndentString (indent) + currentLabel + ":\n";
+			s += getIndentString (indent) + expressionCode.code + "\n";
+			s += getIndentString (indent) + "iffalse " + expressionCode.returnExpression + "\n";
+			s += getIndentString (indent) + "goto " + endLabel + "\n";
+			s += getIndentString (indent) + statementCode.code + "\n";
+			s += getIndentString (indent) + endLabel + ":\n";
+
+			return new Code (s, "");
+		}
 	}
 
 	public class ForNode : StatementNode
@@ -484,7 +639,27 @@ namespace Compiler
 				}
 			}
 		}
+
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			Code initCode = initExpression.generateCode (currSymTable, rootSymTable, indent);
+			string s = initCode.code + "\n";
+			currentLabel = generateLabel ();
+			s += getIndentString (indent) + currentLabel + ":\n";
+			endLabel = generateLabel ();
+			Code condCode = condition.generateCode (currSymTable, rootSymTable, indent);
+			s += stmt.generateCode (currSymTable, rootSymTable, indent).code + "\n";
+			s += increment.generateCode (currSymTable, rootSymTable, indent).code + "\n";
+			s += condCode.code + "\n";
+			s += getIndentString (indent) + "iffalse " + condCode.returnExpression + "\n";
+			s += getIndentString (indent) + "goto " + endLabel + "\n";
+			s += getIndentString (indent) + "goto " + currentLabel + "\n";
+			s += getIndentString (indent) + endLabel + ":\n";
+
+			return new Code (s, "");
+		}
 	}
+
 	public class ReturnNode : StatementNode
 	{
 		public ExpressionNode expression {get; private set;}
@@ -502,15 +677,36 @@ namespace Compiler
 				}
 			}
 		}
-	}
 
-	public class Break : StatementNode
-	{
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			if (expression != null)
+			{
+				Code code = expression.generateCode (currSymTable, rootSymTable, 0);
+				return new Code (code.code + "\n" + getIndentString (indent) + "return " + code.returnExpression, "");
+			}
 
+			return new Code (getIndentString (indent) + "return", "");
+		}
 	}
 
 	public class CompoundStatementNode : StatementNode
 	{
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			string s;
+			if (listNodes.Count == 0)
+			{
+				return new Code ("", "");
+			}
+			s = "";
+			foreach (ASTNode node in listNodes)
+			{
+				s += node.generateCode (currSymTable, rootSymTable, indent + 1).code;
+			}
+
+			return new Code (s, "");
+		}
 	}
 
 	public class StatementListNode : StatementNode
@@ -554,10 +750,34 @@ namespace Compiler
 				}
 			}
 		}
+
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			return new Code (type + " " + id, "");
+		}
 	}
 
 	public class ParameterListNode : ASTNode
 	{
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			string s = "(";
+			foreach (ASTNode node in listNodes)
+			{
+				if (node != listNodes[listNodes.Count - 1])
+				{
+					s += node.generateCode (currSymTable, rootSymTable, 0).code + ", ";
+				}
+				else
+				{
+					s += node.generateCode (currSymTable, rootSymTable, 0).code;
+				}
+			}
+
+			s += ")";
+
+			return new Code (s, "");
+		}
 	}
 
 	public class ClassDefinitionListNode : ASTNode
@@ -566,7 +786,7 @@ namespace Compiler
 
 	public class ClassDefinitionNode : ASTNode
 	{
-		private IDNode classID;
+		protected IDNode classID;
 		public MemberDeclarationList members;
 
 		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
@@ -583,6 +803,24 @@ namespace Compiler
 		public string getClassName ()
 		{
 			return classID.id;
+		}
+
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			string s = "";
+
+			s += ".class " + classID.id + " extends None \n{\n";
+
+			SymbolTable classSymTable = currSymTable.getClassType (classID.id).symTable;
+
+			foreach (ASTNode node in members.listNodes)
+			{
+				s += node.generateCode (classSymTable, rootSymTable, indent + 1).code + "\n";
+			}
+
+			s += "}\n";
+		
+			return new Code (s, "");
 		}
 	}
 
@@ -601,6 +839,24 @@ namespace Compiler
 					break;
 				}
 			}
+		}
+
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			string s = "";
+
+			s += ".class " + classID.id + " extends " + parent.id +"\n{\n\t";
+
+			SymbolTable classSymTable = currSymTable.getClassType (classID.id).symTable;
+
+			foreach (ASTNode node in members.listNodes)
+			{
+				s += "\t." + node.generateCode (classSymTable, rootSymTable, indent + 1) + "\n";
+			}
+
+			s += "}\n";
+
+			return new Code (s, "");
 		}
 	}
 
@@ -623,7 +879,34 @@ namespace Compiler
 				else if (node is TypeNode)
 				{
 					type = symTable.getType ((TypeNode)node);
-					typeName = node.ToString ();
+					typeName = type.ToString ();
+				}
+			}
+		}
+	}
+
+	public class ArrayDeclarationNode : LocalDeclarationNode
+	{
+		public int width {get; private set;}
+		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
+		{
+			foreach (ASTNode node in nodes)
+			{
+				if (node is IDNode)
+				{
+					name = ((IDNode)node).id;
+				}
+				else if (node is NumExprNode)
+				{
+					width = int.Parse (((NumExprNode)node).value);
+				}
+			}
+
+			foreach (ASTNode node in nodes)
+			{
+				if (node is TypeNode)
+				{
+					type = new ArrayType (symTable.getType ((TypeNode)node), width);
 				}
 			}
 		}
@@ -635,14 +918,32 @@ namespace Compiler
 
 	public class ContinueNode : ASTNode
 	{
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			return new Code ("goto " + currentLabel, "");
+		}
 	}
 
 	public class ExpressionStatementNode : ASTNode
 	{
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			string s = "";
+			foreach (ASTNode node in listNodes)
+			{
+				s += node.generateCode (currSymTable, rootSymTable, indent).code + "\n";
+			}
+
+			return new Code (s, "");
+		}
 	}
 
-	public class BreakNode : ASTNode
+	public class BreakNode : StatementNode
 	{
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			return new Code (getIndentString (indent) + "goto " + endLabel, "");
+		}
 	}
 
 	public class TypeNode : ASTNode
@@ -679,7 +980,21 @@ namespace Compiler
 					}
 				}
 			}
+
 			type = new MemberType (accessSpecifier, type, isStatic, (ClassType)symTable.parentType);
+		}
+
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			string s = "";
+
+			s = accessSpecifier.ToString ();
+
+			if (isStatic)
+				s += " static";
+			s += " " + typeName + " " + name;;
+
+			return new Code (getIndentString (indent) + s, "");
 		}
 	}
 
@@ -714,15 +1029,15 @@ namespace Compiler
 						break;
 					}
 				}
+				else if (node is ParameterListNode)
+				{
+					paramList = (ParameterListNode)node;
+				}
 			}
 
 			foreach (ASTNode node in nodes)
 			{
-				if (node is ParameterListNode)
-				{
-					paramList = (ParameterListNode)node;
-				}
-				else if (node is CompoundStatementNode)
+				if (node is CompoundStatementNode)
 				{
 					compoundStatement = (CompoundStatementNode)node;
 				}
@@ -730,6 +1045,30 @@ namespace Compiler
 
 			type = new ConstructorType (accessSpecifier, type, paramList, symTable, (ClassType)symTable.parent.parentType);
 		}
+
+		/*public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			string s = getIndentString (indent);
+			if (paramList != null)
+			{
+				s += ".ctor " + base.generateCode (currSymTable, rootSymTable, 0).code + " " + 
+					paramList.generateCode (currSymTable, rootSymTable, 0).code + "\n";
+			}
+			else
+			{
+				s += ".ctor " + base.generateCode (currSymTable, rootSymTable, 0).code + "\n";
+			}
+			if (compoundStatement != null)
+			{
+				s += compoundStatement.generateCode (((ConstructorType)currSymTable.getType (name)).symTable,
+					rootSymTable, indent).code;
+			}
+			else
+			{
+				s += getIndentString (indent) + "{\n" + getIndentString (indent) +"}\n";
+			}
+			return new Code (s, "");
+		}*/
 	}
 
 	public class ConstructorCall : FunctionCall
@@ -779,8 +1118,12 @@ namespace Compiler
 				if (node is ParameterListNode)
 				{
 					paramList = (ParameterListNode)node;
+					break;
 				}
-				else if (node is CompoundStatementNode)
+			}
+			foreach (ASTNode node in nodes)
+			{
+				if (node is CompoundStatementNode)
 				{
 					compoundStatement = (CompoundStatementNode)node;
 				}
@@ -789,6 +1132,37 @@ namespace Compiler
 			type = new FunctionType (((MemberType)type).accessSpecifier, ((MemberType)type).isStatic, 
 			                         ((MemberType)type).type, symTable, paramList, (ClassType)symTable.parent.parentType);
 		}
+
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			string s = getIndentString (indent);
+			if (paramList != null)
+			{
+				s += ".method " + base.generateCode (currSymTable, rootSymTable, 0).code + " " + 
+					paramList.generateCode (currSymTable, rootSymTable, 0).code + "\n";
+			}
+			else
+			{
+				s += ".method " + base.generateCode (currSymTable, rootSymTable, 0).code + "\n";
+			}
+			s += getIndentString (indent) + "{\n";
+			if (compoundStatement != null)
+			{
+				if (this is ConstructorDefinition)
+				{
+					s += compoundStatement.generateCode (((ConstructorType)currSymTable.getType (name)).symTable,
+						rootSymTable, indent).code;
+				}
+				else
+				{
+					s += compoundStatement.generateCode (((FunctionType)currSymTable.getType (name)).symTable,
+						rootSymTable, indent).code;
+				}
+			}
+			s += getIndentString (indent) +"}\n";
+
+			return new Code (s, "");
+		}
 	}
 
 	public class FieldDeclaration : MemberDeclaration
@@ -796,6 +1170,12 @@ namespace Compiler
 		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
 		{
 			base.addNodes (nodes, symTable);
+		}
+
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			 
+			return new Code (getIndentString (indent) + ".field " + base.generateCode (currSymTable, rootSymTable, 0).code, "");
 		}
 	}
 

@@ -12,7 +12,8 @@ namespace Compiler
 
 	public class FunctionType : MemberType
 	{
-		public List<Type> listParamTypes;
+		public SymbolTable paramSymTable {get; private set;}
+		public List<Type> listParamTypes {get; private set;}
 		public Type returnType;
 		public SymbolTable symTable {get; private set;}
 		public FunctionType (AccessSpecifier spec, bool isStatic, Type return_type, SymbolTable symTable,
@@ -21,12 +22,18 @@ namespace Compiler
 		{
 			returnType = return_type;
 			this.symTable = symTable;
+			paramSymTable = new SymbolTable (null, this);
+			listParamTypes = new List<Type> ();
+
 			if (paramList != null)
 			{
 				foreach (ASTNode node in paramList.listNodes)
 				{
+					listParamTypes.Add (((ParameterNode)node).type);
 					symTable.dict.Add (((ParameterNode)node).id, 
 					                   ((ParameterNode)node).type);
+					paramSymTable.dict.Add (((ParameterNode)node).id, 
+											((ParameterNode)node).type);
 				}
 			}
 		}
@@ -36,7 +43,7 @@ namespace Compiler
 	{
 		public List<Type> listParamTypes;
 		public SymbolTable symTable {get; private set;}
-		public ConstructorType (AccessSpecifier spec, Type type, 
+		public ConstructorType (AccessSpecifier spec, Type type,
 		                        ParameterListNode paramList, SymbolTable symTable, ClassType parentType) : 
 			base (spec, type, false, parentType)
 		{
@@ -56,10 +63,21 @@ namespace Compiler
 	{
 		public Type type {get; private set;}
 	
-		public ArrayType (Type type, int width) : base (type.width * width)
+		public ArrayType (Type type, int width) : base (type.ToString () + "[" + width + "]", 
+			Tag.ArrayType, type.width * width)
 		{
 			this.type = type;
 			this.width = width;
+		}
+	}
+
+	public class ConstantType : Type
+	{
+		public Type type {get; private set;}
+
+		public ConstantType (Type t) : base (t.value, t.tag, t.width)
+		{
+			type = t;
 		}
 	}
 
@@ -106,12 +124,21 @@ namespace Compiler
 		public ClassType parentType {get; private set;}
 
 		public MemberType (AccessSpecifier specifier, Type type, 
-		                   bool isStatic, ClassType parentType) : base (type.width)
+			bool isStatic, ClassType parentType) : base ("", Tag.MethodType, type.width)
 		{
 			this.accessSpecifier = specifier;
 			this.type = type;
 			this.isStatic = isStatic;
 			this.parentType = parentType;
+		}
+	}
+
+	public class TemporaryType : Type
+	{
+		public Type tempType {get; private set;}
+		public TemporaryType (Type t) : base (t.ToString (), t.tag, t.width)
+		{
+			tempType = t;
 		}
 	}
 
@@ -225,6 +252,26 @@ namespace Compiler
 				}
 			}
 
+			long resultl;
+			int resulti;
+
+			if (int.TryParse (w, out resulti))
+				return new ConstantType (Type.Integer);
+			if (long.TryParse (w, out resultl))
+				return new ConstantType (Type.Long);
+
+			double resultd;
+			float resultf;
+
+			if (double.TryParse (w, out resultd))
+				return new ConstantType (Type.Double);
+			if (float.TryParse (w, out resultf))
+				return new ConstantType (Type.Float);
+
+			if ((w.Length == 3 || w.Length == 4) && w[0] == '\'' && w[w.Length - 1] == '\'')
+				return new ConstantType (Type.Character);
+			//if (w[0] == '"' && w[w.Length - 1] == '"')
+			//	return new ConstantType (Type.String);
 			return null;
 		}
 
@@ -260,7 +307,7 @@ namespace Compiler
 			while (e.MoveNext ());
 		}
 
-		public int getTotalSize (bool includeFunctions = false)
+		public int getTotalSize ()
 		{
 			int width = 0;
 			Dictionary <string, Type>.Enumerator e = dict.GetEnumerator ();
@@ -269,9 +316,7 @@ namespace Compiler
 				if (e.Current.Key == null)
 					continue;
 
-				if (includeFunctions && e.Current.Value is FunctionType)
-					width += ((FunctionType)e.Current.Value).symTable.getTotalSize (true);
-				else
+				if (!(e.Current.Value is FunctionType))
 					width += e.Current.Value.width;
 			}
 			while (e.MoveNext ());

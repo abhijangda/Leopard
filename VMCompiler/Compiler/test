@@ -1,8 +1,13 @@
 class A
 {
-    public int h;
-    public void s ()
+    public int k;
+    public void s (int a)
     {
+    	int b;
+
+    	if (b == a)
+    	{
+    	} 
     }
 }
 

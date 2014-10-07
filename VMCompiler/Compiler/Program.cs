@@ -2,6 +2,9 @@ using System;
 using System.IO;
 using LanguageGrammar;
 using System.Collections.Generic;
+/*TODO: Add String support 
+TODO: Correct MemberAccessNode's Three Address Code
+TODO: May have to include types in instruction also like stdarg.i4 or call p (int32, int64)*/
 
 namespace Compiler
 {
@@ -37,7 +40,7 @@ namespace Compiler
 			InterCodeGen intercodegen = new InterCodeGen (p.startParsing (), p.symTableTree);
 			string intercode = intercodegen.generate ();
 			Console.WriteLine ("\n" + intercode + "\n");
-			//Console.WriteLine (new MachineCodeGen (intercode).genMachineCode (p.symTableTree));
+			Console.WriteLine ("LeapordASM Code Generated \n" +  new MachineCodeGen ().genMachineCode (intercode, p.symTableTree, ASTNode.tempsSymTable));
 		}
 	}
 }

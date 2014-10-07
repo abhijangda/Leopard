@@ -64,7 +64,9 @@ namespace Compiler
 
 		//User Defined Types
 		Class, 
-		ClassType, 
+		ClassType,
+		MethodType,
+		ArrayType,
 
 		//Conditional Statements
 		If,
@@ -231,7 +233,7 @@ namespace Compiler
 		public static readonly Word Public;
 		public static readonly Word Private;
 		public static readonly Word Protected;
-
+		
 		public string value {get; protected set;}
 
 		static Word ()
@@ -292,6 +294,7 @@ namespace Compiler
 		public static readonly Type Double;
 		public static readonly Type Void;
 		public static readonly Type Float;
+		public static readonly Type TypeString;
 		public virtual int width {get; set;}
 
 		static Type ()
@@ -303,14 +306,10 @@ namespace Compiler
 			Double = new Type ("double", Tag.Double, 8);
 			Void = new Type ("void", Tag.Void, 1);
 			Float = new Type ("float", Tag.Float, 4);
+			TypeString = new Type ("string", Tag.String, 0); 
 		}
 
 		public Type (string s, Tag _tag, int w) : base (s, _tag)
-		{
-			width = w;
-		}
-
-		protected Type (int w) : base ("runtime_type", Compiler.Tag.DynamicType)
 		{
 			width = w;
 		}

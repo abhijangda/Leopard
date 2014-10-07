@@ -24,221 +24,595 @@ namespace Compiler
 		}
 	}
 
-	public class VariableDescriptor
-	{
-		public string name {get; set;}
-		public int size {get; set;}
-		public string value;
-		public Type type;
-
-		public VariableDescriptor (string name, int size, Type type,
-		                           string value = "")
-		{
-			this.name = name;
-			this.size = size;
-			this.value = value;
-			this.type = type;
-		}
-
-		public string get_loc ()
-		{
-			return "";
-		}
-	}
-
-	public class TemporaryDescriptor : VariableDescriptor
-	{
-		public TemporaryDescriptor (string name, int size, Type type,
-		                            string value = "") : base (name, size, type, value)
-		{
-		}
-	}
-
-	public class LocalDescriptor : VariableDescriptor
-	{
-		public int number {get; private set;}
-		public LocalDescriptor (int number, string name, int size, Type type,
-		                        string value = "") : base (name, size, type, value)
-		{
-			this.number = number;
-		}
-	}
-
 	public class MachineCodeGen
 	{
-		string intercode;
-		Stack<Dictionary<string, VariableDescriptor>> vd_stack;
-		Dictionary <string, VariableDescriptor> vd_dict;
-	
-		public MachineCodeGen (string intercode)
+		public static string getIndent (string s)
 		{
-			this.intercode = intercode;
-			vd_stack = new Stack<Dictionary <string, VariableDescriptor>> ();
-		}
-
-		public void push_vd ()
-		{
-			vd_dict = new Dictionary<string, VariableDescriptor> ();
-			vd_stack.Push (vd_dict);
-		}
-
-		public void pop_vd ()
-		{
-			vd_stack.Pop ();
-			vd_dict = vd_stack.Peek ();
-		}
-
-		public string genMachineCode (SymbolTable symTable)
-		{
-			string machineCode = "";
-			MatchCollection mc = Regex.Matches (intercode, @".struct.+\}", 
-			                                    RegexOptions.Singleline);
-			foreach (Match m in mc)
+			for (int i = 0; i < s.Length; i++)
 			{
-				machineCode += m.Value + "\n";
-				intercode = intercode.Replace (m.Value, "");
+				if (s[i] != ' ')
+					return s.Substring (0, i);
 			}
 
-			MatchCollection linesmc = Regex.Matches (intercode, @".+", 
-			                                         RegexOptions.Multiline);
-			int iter = -1;
-			//while (++iter < linesmc.Count)
-			//	Console.WriteLine (linesmc [iter].Value);
-			iter = 0;
-			do
+			return s;
+		}
+
+
+		public static string getMethodName (string s)
+		{
+			int j = s.IndexOf (" (", StringComparison.CurrentCultureIgnoreCase);
+			string name = "";
+			j--;
+			while (s[j] != ' ')
 			{
-				Match m = Regex.Match (linesmc[iter].Value, @"^extern\s[\w_][\w_\d]+");
-				if (m.Success)
-					machineCode += "\t" + m.Value + "\n";
+				name = s[j] + name;
+				j--;
+			}
+
+			return name;
+		}
+
+		public Type getTypeForString (string s, SymbolTable currSymbolTable, 
+			SymbolTable tempSymbolTable, SymbolTable currParamSymTable, out bool isArgument)
+		{
+			Type t;
+			isArgument = false;
+
+			if (Regex.IsMatch (s, @"t\d+"))
+			{
+				t = tempSymbolTable.getType(s);
+
+				if (t != null)
+				{
+					return t;
+				}
+			}
+
+			t = currParamSymTable.getType (s);
+			if (t != null)
+			{
+				isArgument = true;
+				return t;
+			}
+
+			return currSymbolTable.getType (s);
+		}
+	
+		public string getInstructionFromOp (string op)
+		{
+			if (op == "*")
+				return "mul";
+			if (op == "+")
+				return "add";
+			if (op == "/")
+				return "div";
+			if (op == "-")
+				return "sub";
+			if (op == "&&")
+				return "and";
+			if (op == "||")
+				return "or";
+			if (op == "^")
+				return "xor";
+			if (op == "==")
+				return "eq";
+			if (op == "!=")
+				return "ne";
+			if (op == "<=")
+				return "le";
+			if (op == ">=")
+				return "ge";
+			if (op == ">")
+				return "gt";
+			if (op == ">")
+				return "lt";
+			return "";
+		}
+
+		public string getPushInstructionForConst (ConstantType type, string op)
+		{
+			if (type.type == Type.Integer)
+			{
+				return "push.i " + op;
+			}
+			else if (type.type == Type.Long)
+			{
+				return "push.l " + op;
+			}
+			else if (type.type == Type.Double)
+			{
+				return "push.d " + op;
+			}
+			else if (type.type == Type.Float)
+			{
+				return "push.f " + op;
+			}
+			else if (type.type == Type.Character)
+			{
+				return "push.c " + op;
+			}
+			//else if (type.type == Type.String)
+			//{
+			//}
+
+			return "";
+		}
+
+		public string getLocalsStoreInstruction (string op, Dictionary <string, int> dictNumber, 
+			Dictionary <string, int> argDictNumber, bool isArgument)
+		{
+			string instruction = "";
+
+			if (isArgument)
+			{
+				instruction = "starg " + argDictNumber[op] + "\n";
+			}
+			else
+			{
+				instruction = "stloc " + dictNumber[op] + "\n";
+			}
+
+			return instruction;
+		}
+
+		public string getLocalsLoadInstruction (string op, Dictionary <string, int> dictNumber, 
+			Dictionary <string, int> argDictNumber, bool isArgument)
+		{
+			string instruction = "";
+
+			if (isArgument)
+			{
+				instruction = "ldarg " + argDictNumber[op] + "\n";
+			}
+			else
+			{
+				instruction = "ldloc " + dictNumber[op] + "\n";
+			}
+
+			return instruction;
+		}
+			
+		public string getStoreInstructionForMember (string instr, Dictionary <string, int> dictNumber,
+			Dictionary <string, int> argDictNumber, bool isArgument, string indent)
+		{
+			if (instr.Contains ("."))
+			{
+				/* member of an object */
+				string obj = instr.Substring (0, instr.IndexOf ("."));
+				string member = instr.Substring (instr.IndexOf (".") + 1);
+
+				if (isArgument)
+				{
+					/* isArgument is true means object is the argument */
+					return indent + "ldarg " + argDictNumber [obj] + "\n" + indent + "stfield " + member + "\n";
+				}
 				else
 				{
-					iter--;
-					if (iter == -1)
-						iter = 0;
-					break;
-				}
-				iter ++;
-				if (iter >= linesmc.Count)
-				{
-					iter = 0;
-					break;
+					/* object is a local variable */
+					return indent + "ldloc " + dictNumber [obj] + "\n" + indent + "stfield " + member + "\n";
 				}
 			}
-			while (true);
-
-			SymbolTable curSymTable = null;
-			do
+			else
 			{
-				Match m = null;
-				string[] operators = new string [] {"+", "*", "/", "-"};
-				int size = 4;
+				/* member of this */
+				return indent + "ldarg 0\n" + indent + "stfield " + instr + "\n";
+			}
+		}
+			
+		public string getLoadInstructionForMember (string instr, Dictionary <string, int> dictNumber, 
+			Dictionary <string, int> argDictNumber, bool isArgument, string indent)
+		{
+			if (instr.Contains ("."))
+			{
+				/* member of an object */
+				string obj = instr.Substring (0, instr.IndexOf ("."));
+				string member = instr.Substring (instr.IndexOf (".") + 1);
 
-				/* Function definitions */
-				m = Regex.Match (linesmc [iter].Value, @"func\s+\w[\w\d]*:");
-				if (m.Success)
+				if (isArgument)
 				{
-					string func = m.Value.Substring ("func".Length, 
-					                                 m.Value.Length - "func".Length - 1).Trim ();
-					//curSymTable = symTable.getFuncTable (func);
-					machineCode += "\t.locals\n\t{";
-					iter++;
-					continue;
+					/* isArgument is true means object is the argument */
+					return indent + "ldarg " + argDictNumber [obj] + "\n" + indent + "ldfield " + member + "\n";
 				}
-
-				/*Return statement*/
-				m = Regex.Match (linesmc [iter].Value, @"return\s*[\w\d]*");
-				if (m.Success)
+				else
 				{
+					/* object is a local variable */
+					return indent + "ldloc " + dictNumber [obj] + "\n" + indent + "ldfield " + member + "\n";
 				}
+			}
+			else
+			{
+				/* member of this */
+				return indent + "ldarg 0\n" + indent + "ldfield " + instr + "\n";
+			}
+		}
 
-				foreach (string op in operators)
+		public string getStoreInstruction (string result, Type typeresult, Dictionary <string, int> dictNumber, 
+			Dictionary <string, int> argDictNumber, bool isresultArgument, string indent)
+		{
+			if (typeresult is MemberType)
+			{
+				return getStoreInstructionForMember (result, dictNumber, 
+					argDictNumber, isresultArgument, indent);
+			}
+			else if (!(typeresult is TemporaryType))
+			{
+				return indent + getLocalsStoreInstruction (result, dictNumber, 
+					argDictNumber, isresultArgument);
+			}
+			return "";
+		}
+
+		public string getCallInstructionForMethod (string instr, FunctionType type,
+			Dictionary <string, int> dictNumber, Dictionary <string, int> argDictNumber, 
+			bool isArgument, string indent)
+		{
+			if (instr.Contains ("."))
+			{
+				/* member of an object */
+				string obj = instr.Substring (0, instr.IndexOf ("."));
+				string member = instr.Substring (instr.IndexOf (".") + 1);
+
+				if (isArgument)
 				{
-					m = Regex.Match (linesmc[iter].Value, @"[\w\d]+\s*=\s*[\w\d]+\s*\" + op + @"\s*[\w\d]+");
+					/* isArgument is true means object is the argument */
+					return indent + "ldarg " + argDictNumber [obj] + "\n" + indent + "call " + member + "\n";
+				}
+				else
+				{
+					/* object is a local variable */
+					return indent + "ldloc " + dictNumber [obj] + "\n" + indent + "call " + member + "\n";
+				}
+			}
+			else
+			{
+				/* member of this */
+				return indent + "ldarg 0\n" + indent + "call " + instr + "\n";
+			}
+		}
 
-					if (m.Success)
+		public string getLoadInstruction (Type optype, string op, Dictionary <string, int> dictNumber, 
+			Dictionary <string, int> argDictNumber, bool isArgument, string indent)
+		{
+			if (optype is ConstantType)
+			{
+				return indent + getPushInstructionForConst ((ConstantType)optype, op) + "\n";
+			}
+
+			if (optype is MemberType)
+			{
+				return getLoadInstructionForMember (op, dictNumber, argDictNumber,
+					isArgument, indent);
+			}
+			else if (optype is ArrayType)
+			{
+			}
+
+			return indent + getLocalsLoadInstruction (op, dictNumber, argDictNumber, isArgument) + "\n";
+		}
+
+		public string getConvertInstruction (string type, string indent)
+		{
+			if (type == "int")
+				return indent + "conv.i\n";
+			if (type == "short")
+				return indent + "conv.s\n";
+			if (type == "byte")
+				return indent + "conv.b\n";
+			if (type == "long")
+				return indent + "conv.l\n";
+			if (type == "float")
+				return indent + "conv.f\n";
+			if (type == "double")
+				return indent + "conv.d\n";
+			return indent + "conv " + type + "\n";
+		}
+
+		public string genMachineCode (string intercode, SymbolTable rootSymbolTable, SymbolTable tempSymbolTable)
+		{
+			string machineCode = "";
+			int i;
+			MatchCollection matches = Regex.Matches (intercode, @".+", RegexOptions.Multiline);
+			SymbolTable currSymbolTable = rootSymbolTable;
+			i = 0;
+			ClassType currClass;
+			Dictionary<string, int> dictNumber = null;
+			Dictionary<string, int> argDictNumber = null;
+			SymbolTable currParamSymTable = null;
+			string[] binaryoperators = new string[] {"*", "+", "/", "-", ">>", "<<", "||", "&&", "|", "&"};
+			string[] condoperators = new string[] {"==", "<=", ">=", "!="};
+			List<string> operators = new List<string> ();
+			operators.AddRange (binaryoperators);
+			operators.AddRange (condoperators);
+		
+			bool isArgument;
+		
+			while (i < matches.Count)
+			{
+				Match match;
+
+				match = Regex.Match (matches[i].Value, @".class.+");
+				string indent = getIndent (matches[i].Value) + "    ";
+
+				if (match.Success) 
+				{
+					machineCode += matches[i].Value + "\n";
+					currClass = (ClassType)rootSymbolTable.getClassType (matches[i].Value.Split (" ".ToCharArray (), 3)[1]);
+					currSymbolTable = currClass.symTable;
+					while (i < matches.Count && !Regex.IsMatch (matches[i].Value, @"\s*{"))
 					{
+						i++;
+					}
 
-						break;
+					machineCode += matches [i].Value + "\n";
+					if (Regex.IsMatch (matches[i+1].Value, @"\s*}"))
+					{
+						i++;
+						continue;
+					}
+
+					machineCode += ".size " + currClass.width + "\n";
+				}
+				else if (Regex.IsMatch (matches[i].Value, @"\s*{"))
+				{
+					machineCode += matches[i].Value + "\n";
+				}
+				else if (Regex.IsMatch (matches[i].Value, @"\s*}"))
+				{
+					currSymbolTable = currSymbolTable.parent;
+					machineCode += matches[i].Value + "\n";
+				}
+				else if (Regex.IsMatch (matches[i].Value, @"\s*.field.+"))
+				{
+					machineCode += matches[i].Value + "\n";
+				}
+				else if (Regex.IsMatch (matches[i].Value, @"\s*.ctor.+"))
+				{
+					machineCode += matches[i].Value + "\n";
+					currSymbolTable = ((ConstructorType)rootSymbolTable.getType (matches[i].Value.Split (" ".ToCharArray(), 3)[1])).symTable;
+				}
+				else if (Regex.IsMatch (matches[i].Value, @"\s*.method.+"))
+				{
+					string name = getMethodName (matches[i].Value);
+					machineCode += matches[i].Value + "\n";
+					FunctionType funcType = (FunctionType)currSymbolTable.getType (name);
+					currSymbolTable = funcType.symTable;
+					currParamSymTable = funcType.paramSymTable;
+
+					while (i < matches.Count && !Regex.IsMatch (matches[i].Value, @"\s*{"))
+					{
+						i++;
+					}
+
+					machineCode += matches [i].Value + "\n";
+					if (Regex.IsMatch (matches[i+1].Value, @"\s*}"))
+					{
+						i++;
+						continue;
+					}
+					Dictionary<string, Type>.Enumerator e = currSymbolTable.dict.GetEnumerator ();
+					dictNumber = new Dictionary<string, int> ();
+					machineCode += indent + ".total_locals " + currSymbolTable.dict.Count + "\n";
+					int j = 0;
+					machineCode += indent + ".locals (\n";
+					do
+					{
+						if (e.Current.Key == null)
+						{
+							continue;
+						}
+
+						if (currParamSymTable.dict.ContainsKey (e.Current.Key))
+						{
+							continue;
+						}
+
+						dictNumber.Add (e.Current.Key, j);
+						machineCode += indent + "   " + j + " " + e.Current.Value.ToString () + " " +
+							e.Current.Value.width + ",\n";
+						j++;
+					}
+					while (e.MoveNext ());
+
+					argDictNumber = new Dictionary<string, int> ();
+					e = currParamSymTable.dict.GetEnumerator ();
+					j = 0;
+
+					if (funcType.isStatic)
+					{
+						j = 1;
+					}
+				
+					do
+					{
+						if (e.Current.Key == null)
+						{
+							continue;
+						}
+
+						argDictNumber.Add (e.Current.Key, j);
+						j++;
+					}
+					while (e.MoveNext ());
+
+					machineCode += indent + ")\n";
+				}
+				else if (Regex.IsMatch (matches[i].Value, @"\s*L[\d]+:"))
+				{
+					machineCode += indent + matches[i].Value + "\n";
+				}
+				else if (Regex.IsMatch (matches[i].Value, @"[\w\d]+\s*=\s*cast\s*\([\w\d]+\)\s*[\w\d]+"))
+				{
+					string trimed = matches[i].Value.TrimStart();
+					string result = trimed.Substring (0, trimed.IndexOf(" ="));
+					string castTo = trimed.Substring (trimed.IndexOf ("(") + 1, trimed.IndexOf (")") - trimed.IndexOf ("(") - 1).Trim ();
+					string source = trimed.Substring (trimed.IndexOf ("(")).Trim ();
+
+					Type sourcetype = getTypeForString (source, currSymbolTable, tempSymbolTable,
+						currParamSymTable, out isArgument);
+
+					machineCode += getLoadInstruction (sourcetype, source, dictNumber, argDictNumber,
+						isArgument, indent);
+
+					machineCode += getConvertInstruction (castTo, indent);
+
+					Type typeresult = getTypeForString (result, currSymbolTable, tempSymbolTable, 
+						currParamSymTable, out isArgument);
+
+					//if (typeresult is ConstantType) This can't happen
+					machineCode += getStoreInstruction (result, typeresult, dictNumber, argDictNumber, 
+						isArgument, indent) + "\n";
+				}
+				else if (Regex.IsMatch (matches[i].Value, @"\s*iffalse\s*[\w\d]+\s*goto\s*[\w\d]+"))
+				{
+					//conditional statements
+					string trimed = matches[i].Value.TrimStart();
+					string source = trimed.Substring ("iffalse".Length, trimed.IndexOf ("goto")).Trim ();
+					string label = trimed.Substring (trimed.IndexOf ("goto") + "goto".Length).Trim ();
+					Type sourcetype = getTypeForString (source, currSymbolTable, tempSymbolTable,
+						currParamSymTable, out isArgument);
+
+					machineCode += getLoadInstruction (sourcetype, source, dictNumber, argDictNumber,
+						isArgument, indent);
+
+					machineCode += indent + "brzero " + label + "\n";
+				}
+				else if (Regex.IsMatch (matches[i].Value, @"\s*goto\s*[\w\d]+"))
+				{
+					string trimed = matches[i].Value.TrimStart();
+					machineCode += indent + trimed.Replace ("goto", "br") + "\n";
+				}
+				else if (Regex.IsMatch (matches[i].Value, @"\s*[\w\d]+\s*=\s*new\s*[\w\d]+"))
+				{
+					//new operator call
+					string trimed = matches[i].Value.TrimStart();
+					string typename = trimed.Substring(trimed.IndexOf("new") + "new".Length).Trim ();
+					string result = trimed.Substring(trimed.IndexOf(" ="));
+					bool isresultArgument;
+
+					Type functype = getTypeForString (result, currSymbolTable, tempSymbolTable,
+						currParamSymTable, out isArgument);
+					machineCode += "new " + getCallInstructionForMethod (result, (FunctionType)functype, dictNumber, argDictNumber,
+						isArgument, indent);
+
+					Type typeresult = getTypeForString (result, currSymbolTable, tempSymbolTable, 
+						currParamSymTable, out isresultArgument);
+
+					//if (typeresult is ConstantType) This can't happen
+					machineCode += getStoreInstruction (result, typeresult, dictNumber, argDictNumber, 
+						isresultArgument, indent) + "\n";
+				}
+				else if (Regex.IsMatch (matches[i].Value, @"\s*[\w\d]+\s*=\s*call\s*[\w\d]+"))
+				{
+					//non-void function call
+					string trimed = matches[i].Value.TrimStart();
+					string func = trimed.Substring(trimed.IndexOf("call") + "call".Length).Trim ();
+					string result = trimed.Substring(0, trimed.IndexOf(" ="));
+					bool isresultArgument;
+
+					Type functype = getTypeForString (func, currSymbolTable, tempSymbolTable,
+						currParamSymTable, out isArgument);
+					machineCode += getCallInstructionForMethod (func, (FunctionType)functype, dictNumber, argDictNumber,
+						isArgument, indent);
+						
+					Type typeresult = getTypeForString (result, currSymbolTable, tempSymbolTable, 
+						currParamSymTable, out isresultArgument);
+
+					//if (typeresult is ConstantType) This can't happen
+					machineCode += getStoreInstruction (result, typeresult, dictNumber, argDictNumber, 
+						isresultArgument, indent) + "\n";
+				}
+				else if (Regex.IsMatch (matches[i].Value, @"\s*param\s*[\w\d]+"))
+				{
+					//param
+					string trimed = matches[i].Value.TrimStart();
+					string result_instruction = "";
+					string source = trimed.Substring(trimed.IndexOf("param") + "param".Length).Trim ();
+					bool isSourceArgument;
+
+					Type sourcetype = getTypeForString (source, currSymbolTable, tempSymbolTable,
+						currParamSymTable, out isSourceArgument);
+					machineCode += getLoadInstruction (sourcetype, source, dictNumber, argDictNumber,
+						isSourceArgument, indent);
+				}
+				else if (Regex.IsMatch (matches[i].Value, @"\s*call\s*[\w\d]+"))
+				{
+					//void function call
+					string trimed = matches[i].Value.TrimStart();
+					string func = trimed.Substring(trimed.IndexOf("call") + "call".Length).Trim ();
+
+					Type functype = getTypeForString (func, currSymbolTable, tempSymbolTable,
+						currParamSymTable, out isArgument);
+					machineCode += getCallInstructionForMethod (func, (FunctionType)functype, dictNumber, argDictNumber,
+						isArgument, indent);
+				}
+				else if (Regex.IsMatch (matches[i].Value, @"\s*[\w\d]+\s*=\s*[\w\d]+$"))
+				{
+					string trimed = matches[i].Value.TrimStart();
+					string result_instruction = "";
+					string result = trimed.Substring(0, trimed.IndexOf(" ="));
+					string source = trimed.Substring(trimed.IndexOf("=") + 1).Trim ();
+					bool isresultArgument, isSourceArgument;
+
+					Type sourcetype = getTypeForString (source, currSymbolTable, tempSymbolTable,
+						currParamSymTable, out isSourceArgument);
+					machineCode += getLoadInstruction (sourcetype, source, dictNumber, argDictNumber,
+						isSourceArgument, indent);
+				
+					Type typeresult = getTypeForString (result, currSymbolTable, tempSymbolTable, 
+						currParamSymTable, out isresultArgument);
+
+					//if (typeresult is ConstantType) This can't happen
+					result_instruction = getStoreInstruction (result, typeresult, dictNumber, argDictNumber, 
+						isresultArgument, indent);
+
+					machineCode += result_instruction + "\n";
+				}
+				else
+				{
+					foreach (string op in operators)
+					{
+						if (Regex.IsMatch (matches[i].Value, @"\s*[\w\d]+\s*=\s*[\w\d]+\s*\" + op + @"\s*[\w\d]+$"))
+						{
+							string instruction = getInstructionFromOp (op);
+							string trimed = matches[i].Value.TrimStart();
+							string result = trimed.Substring(0, trimed.IndexOf(" ="));
+							string op1 = trimed.Substring(trimed.IndexOf("=") + 1,
+								trimed.IndexOf(op) - (trimed.IndexOf("=") + 1)).Trim ();
+							string op2 = trimed.Substring(trimed.IndexOf(op) + 1).Trim ();
+							Type type1 = getTypeForString (op1, currSymbolTable, tempSymbolTable,
+															currParamSymTable, out isArgument);
+							string op1instruction = "";
+							string op2instruction = "";
+
+							op1instruction = getLoadInstruction (type1, op1, dictNumber, argDictNumber,
+								isArgument, indent);
+
+							Type type2 = getTypeForString (op2, currSymbolTable, tempSymbolTable, 
+								currParamSymTable, out isArgument);
+
+							op2instruction = getLoadInstruction (type2, op2, dictNumber, argDictNumber,
+								isArgument, indent);
+								
+							Type typeresult = getTypeForString (result, currSymbolTable, tempSymbolTable,
+								currParamSymTable, out isArgument);
+
+							string result_instruction = "";
+
+							result_instruction = getStoreInstruction (result, typeresult, dictNumber, 
+								argDictNumber, isArgument, indent);
+
+							machineCode += op1instruction + "\n" + op2instruction + "\n" + indent + instruction + "\n" +
+								result_instruction;
+
+							break;
+						}
 					}
 				}
 
-				if (m != null && m.Success)
-				{
-					iter ++;
-					continue;
-				}
-
-				m = Regex.Match (linesmc[iter].Value, @"[\w\d]+\s*=\s*new\s*[\w\d]+");
-				if (m.Success)
-				{
-
-					iter++;
-					continue;
-				}
-
-				m = Regex.Match (linesmc[iter].Value, @"[\w\d]+\s*=\s*[\w\d]+\.[\w\d]");
-				if (m.Success)
-				{
-
-					iter++;
-					continue;
-				}
-
-				m = Regex.Match (linesmc[iter].Value, @"[\w\d]+\.[\w\d]\s*=\s*[\w\d]+");
-				if (m.Success)
-				{
-					iter++;
-					continue;
-				}
-		
-				m = Regex.Match (linesmc[iter].Value, @"[\w\d]+\s*=\s*[\w\d]+");
-				if (m.Success)
-				{
-
-					iter++;
-					continue;
-				}
-
-				/*For Strings*/
-				m = Regex.Match (linesmc[iter].Value, "[\\w\\d]+\\s*=\\s*\".+\"");
-				if (m.Success)
-				{
-
-				}
-
-				m = Regex.Match (linesmc[iter].Value, @"IfFalse\s+[\w\d]+\s+goto\s+[\w\d]+");
-				if (m.Success)
-				{
-					string op = m.Value.Substring ("ifFalse".Length, m.Value.IndexOf ("goto") - "ifFalse".Length).Trim ();
-					VariableDescriptor vd = vd_dict [op];
-					machineCode += "\tsub " + vd.get_loc () + ", 0\n";
-					string label = m.Value.Substring (m.Value.IndexOf ("goto") + "goto".Length).Trim ();
-					machineCode += "\tjne " + label + "\n";
-					iter++;
-					continue;
-				}
-
-				m = Regex.Match (linesmc[iter].Value, @"goto\s+[\w\d]+");
-				if (m.Success)
-				{
-					string label = m.Value.Substring (m.Value.IndexOf ("goto") + "goto".Length).Trim ();
-					machineCode += "\tjmp " + label + "\n";
-					iter++;
-					continue;
-				}
-
-				m = Regex.Match (linesmc [iter].Value, @"call\s+\w[\w\d]+");
-				if (m.Success)
-				{
-				}
-
-				iter ++;
+				i++;
 			}
-			while (iter < linesmc.Count);
-
+		
 			return machineCode;
 		}
-
-
 	}
 }

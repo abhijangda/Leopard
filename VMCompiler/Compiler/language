@@ -17,6 +17,7 @@ type-specifier -> 'char'
 type-specifier -> 'void'
 type-specifier -> 'float'
 type-specifier -> 'long'
+type-specifier -> 'string'
 type-specifier -> 'ID'
 
 class-definition -> class-signature '{' member-declaration-list '}'

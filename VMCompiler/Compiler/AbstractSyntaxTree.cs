@@ -37,7 +37,7 @@ namespace Compiler
 		{
 			tempCount += 1;
 			string temp = "t" + tempCount;
-			tempsSymTable.put (temp, expression.getType (symTable));
+			tempsSymTable.put (temp, new TemporaryType (expression.getType (symTable)));
 			return temp;
 		}
 
@@ -238,7 +238,7 @@ namespace Compiler
 
 		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
 		{
-			string temp = getTemporaryName (this, rootSymTable);
+			string temp = getTemporaryName (this, currSymTable);
 			return new Code ("", objectName + "." + memberName);
 		}
 	}
@@ -549,8 +549,9 @@ namespace Compiler
 		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
 		{
 			Code constructorCode = constructorCall.generateCode (currSymTable, rootSymTable, indent);
-			return new Code (getIndentString (indent) + constructorCode.returnExpression + " = new " + newType.ToString () + "\n" + 
-				getIndentString (indent) + "param " + constructorCode.returnExpression + "\n" + constructorCode.code, constructorCode.returnExpression);
+			return new Code (getIndentString (indent) + constructorCode.code + "\n" + 
+				getIndentString (indent) + constructorCode.returnExpression + " = new " + newType.ToString () + "\n",
+				constructorCode.returnExpression);
 		}
 	}
 
@@ -558,6 +559,7 @@ namespace Compiler
 	{
 		public StatementNode stmt{get; private set;}
 		public ExpressionNode expression{get; private set;}
+
 		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
 		{
 			stmt = null;
@@ -570,6 +572,23 @@ namespace Compiler
 				else if (node is ExpressionNode)
 					expression = (ExpressionNode)node;
 			}
+		}
+
+		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
+		{
+			Code expressionCode = expression.generateCode (currSymTable, rootSymTable, indent);
+			Code statementCode = stmt.generateCode (currSymTable, rootSymTable, indent);
+
+			currentLabel = generateLabel ();
+
+			string s = "";
+			s = getIndentString (indent) + expressionCode.code + "\n";
+			s += getIndentString (indent+1) + "iffalse " + expressionCode.returnExpression + " ";
+			s += "goto " + currentLabel + "\n";
+			s += getIndentString (indent) + statementCode.code + "\n";
+			s += getIndentString (indent+1) + currentLabel + ":\n";
+			
+			return new Code (s, "");
 		}
 	}
 
@@ -601,8 +620,8 @@ namespace Compiler
 
 			string s = getIndentString (indent) + currentLabel + ":\n";
 			s += getIndentString (indent) + expressionCode.code + "\n";
-			s += getIndentString (indent) + "iffalse " + expressionCode.returnExpression + "\n";
-			s += getIndentString (indent) + "goto " + endLabel + "\n";
+			s += getIndentString (indent) + "iffalse " + expressionCode.returnExpression + " ";
+			s += "goto " + endLabel + "\n";
 			s += getIndentString (indent) + statementCode.code + "\n";
 			s += getIndentString (indent) + endLabel + ":\n";
 
@@ -651,8 +670,8 @@ namespace Compiler
 			s += stmt.generateCode (currSymTable, rootSymTable, indent).code + "\n";
 			s += increment.generateCode (currSymTable, rootSymTable, indent).code + "\n";
 			s += condCode.code + "\n";
-			s += getIndentString (indent) + "iffalse " + condCode.returnExpression + "\n";
-			s += getIndentString (indent) + "goto " + endLabel + "\n";
+			s += getIndentString (indent) + "iffalse " + condCode.returnExpression + " ";
+			s += "goto " + endLabel + "\n";
 			s += getIndentString (indent) + "goto " + currentLabel + "\n";
 			s += getIndentString (indent) + endLabel + ":\n";
 
@@ -815,7 +834,14 @@ namespace Compiler
 
 			foreach (ASTNode node in members.listNodes)
 			{
-				s += node.generateCode (classSymTable, rootSymTable, indent + 1).code + "\n";
+				if (node is FieldDeclaration)
+					s += node.generateCode (classSymTable, rootSymTable, indent + 1).code + "\n";
+			}
+
+			foreach (ASTNode node in members.listNodes)
+			{
+				if (!(node is FieldDeclaration))
+					s += node.generateCode (classSymTable, rootSymTable, indent + 1).code + "\n";
 			}
 
 			s += "}\n";
@@ -1136,14 +1162,18 @@ namespace Compiler
 		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
 		{
 			string s = getIndentString (indent);
+			string toadd = ".method ";
+			if (this is ConstructorDefinition)
+				toadd = ".ctor ";
+	
 			if (paramList != null)
 			{
-				s += ".method " + base.generateCode (currSymTable, rootSymTable, 0).code + " " + 
+				s += toadd + base.generateCode (currSymTable, rootSymTable, 0).code + " " + 
 					paramList.generateCode (currSymTable, rootSymTable, 0).code + "\n";
 			}
 			else
 			{
-				s += ".method " + base.generateCode (currSymTable, rootSymTable, 0).code + "\n";
+				s += toadd + base.generateCode (currSymTable, rootSymTable, 0).code + "\n";
 			}
 			s += getIndentString (indent) + "{\n";
 			if (compoundStatement != null)

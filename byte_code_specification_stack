@@ -23,74 +23,56 @@
 7 push.f <float> //Push num of type float
 8 push.d <double> //Push num of type double
 9 dup //Duplicate the value on the top of the stack.
-10 pop.b <register> //Pop value from the stack to a specified register
-11 pop.s <register> //
-12 pop.i <register> //
-13 pop.l <register> //
-14 pop.f <register> //
-15 pop.d <register> //
-16 call <method> //Call method described by method.  
-17 ret //Return from method, possibly with a value.  
+10 conv.b //Convert the top of stack to byte
+11 conv.s //Convert the top of stack to short
+12 conv.i //Convert the top of stack to integer
+13 conv.l //Convert the top of stack to long
+14 conv.f //Convert the top of stack to float
+15 conv.d //Convert the top of stack to double
+16 conv <class> //Convert the top of stack to class
+17 call <method> //Call method described by method.  
 18 br <label> //Branch to target.  
-19 brfalse <register> <label> //Branch to target if value is zero (false).  
-20 brnull <register> <label> //Branch to target if value is null (alias for brfalse).  
-21 brzero <register> <label> //Branch to target if value is zero (alias for brfalse).  
-22 brinst <register> <label> //Branch to target if value is a non-null object reference (alias for brtrue).  
-23 brtrue <register> <label> //Branch to target if value is non-zero (true).  
-24 beq <register> <label> //Branch to target if equal.  
-25 bge <register> <label> //Branch to target if greater than or equal to.  
-26 bgt <register> <label> //Branch to target if greater than.  
-27 ble <register> <label> //Branch to target if less than or equal to.  
-28 blt <register> <label> //Branch to target if less than.  
-29 bne.un <register> <label> //Branch to target if unequal or unordered.  
-30 bge.un <register> <label> //Branch to target if greater than or equal to (unsigned or unordered).  
-31 bgt.un <register> <label> //Branch to target if greater than (unsigned or unordered).  
-32 ble.un <register> <label> //Branch to target if less than or equal to (unsigned or unordered).  
-33 blt.un <register> <label> //Branch to target if less than (unsigned or unordered).
-34 add <register> <register> //Add two values, and push the result on the stack
-35 sub <register> <register> //Subtract value2 from value1, and push the result on the stack
-36 mul <register> <register> //Multiply values.  and push the result on the stack
-37 div <register> <register> //Divide two values to return a quotient in floating point and push the result on the stack
-38 div.un <register> <register> //Divide two values, unsigned, returning a quotient and push the result on the stack
-39 rem <register> <register> //Remainder when dividing one value by another and push the result on the stack
-40 rem.un <register> <register> //Remainder when dividing one unsigned value by another and push the result on the stack
-41 and <register> <register> //Bitwise AND of two integral values, and push the result on the stack
-42 or <register> <register> //Bitwise OR of two integer values, and push the result on the stack  
-43 xor <register> <register> //Bitwise XOR of integer values, and push the result on the stack
-44 shl <register> //Shift an integer left (shifting in zeros), and push the result on the stack
-45 shr <register> //Shift an integer right (shift in sign), and push the result on the stack
-46 shr.un <register> //Shift an integer right (shift in zero), and push the result on the stack
-47 neg <register> //Negate value. and push the result on the stack
-48 not <register> //Bitwise complement (logical not). and push the result on the stack
-49 add.stack //Add two values, and push the result on the stack
-50 sub.stack //Subtract value2 from value1, and push the result on the stack
-51 mul.stack //Multiply values. and push the result on the stack
-52 div.stack //Divide two values to return a quotient or floating-point result. and push the result on the stack
-53 div.un.stack //Divide two values, unsigned, returning a quotient. and push the result on the stack
-54 rem.stack //Remainder when dividing one value by another. and push the result on the stack
-55 rem.un.stack //Remainder when dividing one unsigned value by another. and push the result on the stack
-56 and.stack //Bitwise AND of two integral values, returns an integral value. and push the result on the stack
-57 or.stack //Bitwise OR of two integer values, returns an integer. and push the result on the stack
-58 xor.stack //Bitwise XOR of integer values, returns an integer. and push the result on the stack
-59 shl.stack //Shift an integer left (shifting in zeros), return an integer and push the result on the stack
-60 shr.stack //Shift an integer right (shift in sign), return an integer. and push the result on the stack
-61 shr.un.stack //Shift an integer right (shift in zero), return an integer. and push the result on the stack
-62 neg.stack //Negate value. and push the result on the stack
-63 not.stack //Bitwise complement (logical not). and push the result on the stack
-64 mov <register> <register> //Copy a value from one register to another
+21 brzero  <label> //Branch to target if value is zero (alias for brfalse).  
+24 beq  <label> //Branch to target if equal.  
+25 bge  <label> //Branch to target if greater than or equal to.  
+26 bgt  <label> //Branch to target if greater than.  
+27 ble  <label> //Branch to target if less than or equal to.  
+28 blt  <label> //Branch to target if less than.  
+34 add //Add two values, and push the result on the stack
+35 sub //Subtract value2 from value1, and push the result on the stack
+36 mul   //Multiply values.  and push the result on the stack
+37 div   //Divide two values to return a quotient in floating point and push the result on the stack
+38 div.un   //Divide two values, unsigned, returning a quotient and push the result on the stack
+39 rem   //Remainder when dividing one value by another and push the result on the stack
+40 rem.un   //Remainder when dividing one unsigned value by another and push the result on the stack
+41 and   //Bitwise AND of two integral values, and push the result on the stack
+42 or   //Bitwise OR of two integer values, and push the result on the stack  
+43 xor   //Bitwise XOR of integer values, and push the result on the stack
+44 shl  //Shift an integer left (shifting in zeros), and push the result on the stack
+45 shr  //Shift an integer right (shift in sign), and push the result on the stack
+46 shr.un  //Shift an integer right (shift in zero), and push the result on the stack
+47 neg  //Negate value. and push the result on the stack
+48 not  //Bitwise complement (logical not). and push the result on the stack
+49 le //Push 1 to stack if less than or equal to else 0
+50 ge //Push 1 to stack if greater than or equal to else 0
+51 lt //Push 1 to stack if less than else 0
+52 gt //Push 1 to stack if greater than else 0
+53 eq //Push 1 to stack if equal to else 0
+54 ne //Push 1 to stack if not equal to else 0
 65 push.str <string> //Push a string object for the literal string.
 66 push.str2 //Push a string object for the literal string and copies its address to the register
-67 push.field <register> <field> //Push the value of field of object (or value type) obj, onto the stack. Object model instruction
-68 push.fielda <register> <field> //Push the address of field of object obj on the stack. Object model instruction
-69 ld.field <register> <field> //Replace the value of field of the object obj with value. Object model instruction
+67 push.field <field> //Push the value of field of object (or value type) obj, onto the stack. Object model instruction
+68 push.fielda  <field> //Push the address of field of object obj on the stack. Object model instruction
+69 ld.field <field> //Replace the value of field of the object obj with value. Object model instruction
 70 newarr <etype> //Create a new array with elements of type etype and copies its address to register given.
-71 ld.len <register> //Copy the length of array in the register.
+71 ld.len //Copy the length of array in the register.
 72 push.len //Push the length of array on the stack
 73 push.elema <class> //push the address of element at index onto the top of the stack. Object model instruction     
-74 stelem <register> <typeTok> //Replace array element at index with the value on the stack Object model instruction
-75 new <type> <register> //Create a new object of type and push its address to register
-76 returnval.stack //Return the value on the top of the stack
-77 returnval <register> //Return the value in the Register
+74 stelem //Replace array (third topmost element on stack) element at index (second topmost element on stack) with the value on the stack Object model instruction
+75 new <type>  //Create a new object of type and push its address to register
+76 returnval //Return the value on the top of the stack
 78 return //Return the function
 79 ldloc <uint16 (indx)> //Load local variable of index indx onto stack.
 80 stloc <uint16 (indx)> //Pop a value from stack into local variable indx.
+81 ldfield <field> //Load the field of object
+82 stfield <field>

@@ -224,6 +224,7 @@ namespace Compiler
 	{
 		public string objectName {get; private set;}
 		public string memberName {get; private set;}
+		public bool isfirst;
 
 		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
 		{
@@ -239,7 +240,13 @@ namespace Compiler
 		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
 		{
 			string temp = getTemporaryName (this, currSymTable);
-			return new Code ("", objectName + "." + memberName);
+
+			if (isfirst)
+				return new Code (getIndentString (indent) + 
+					objectName + "." + memberName + " = " + temp, temp);
+			else
+				return new Code (getIndentString (indent) + 
+					temp + " = " + objectName + "." + memberName, temp);
 		}
 	}
 
@@ -460,10 +467,18 @@ namespace Compiler
 			{
 				((ArrayIndexNode)expression1).isfirst = true && op == Word.Equal;
 			}
+			else if (expression1 is MemberAccessNode)
+			{
+				((MemberAccessNode)expression1).isfirst = true && op == Word.Equal;
+			}
 
 			if (expression2 is ArrayIndexNode)
 			{
 				((ArrayIndexNode)expression2).isfirst = false && op == Word.Equal;
+			}
+			else if (expression2 is MemberAccessNode)
+			{
+				((MemberAccessNode)expression2).isfirst = false && op == Word.Equal;
 			}
 
 			Code expressionCode1 = expression1.generateCode (currSymTable, rootSymTable, indent);
@@ -484,8 +499,10 @@ namespace Compiler
 			}
 			else
 			{
-				s += getIndentString (indent) + expressionCode1.returnExpression + " = " + expressionCode2.returnExpression;
-				if (op == Word.Equal && expression1 is ArrayIndexNode && expressionCode1.code != "")
+				s += getIndentString (indent) + expressionCode1.returnExpression + " = " + expressionCode2.returnExpression + "\n";
+				if (op == Word.Equal &&
+					(expression1 is ArrayIndexNode || expression1 is MemberAccessNode) &&
+					expressionCode1.code != "")
 					s += expressionCode1.code + "\n";
 			}
 

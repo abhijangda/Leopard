@@ -686,7 +686,7 @@ namespace Compiler
 
 					machineCode += indent + "stelem\n";
 				}
-				else if (Regex.IsMatch (matches[i].Value, @"\s*[\w\d]+\s*=\s*[\w\d]+$"))
+				else if (Regex.IsMatch (matches[i].Value, @"\s*[\w\d\.]+\s*=\s*[\w\d\.]+$"))
 				{
 					string trimed = matches[i].Value.TrimStart();
 					string result_instruction = "";

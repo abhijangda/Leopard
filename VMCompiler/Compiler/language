@@ -82,6 +82,8 @@ expression -> new-expression
 new-expression -> 'new' constructor-call
 constructor-call -> 'ID' '(' arg-list ')'
 constructor-call -> 'ID' '(' ')'
+constructor-call -> array-constructor-call
+array-constructor-call -> type-specifier '[' 'num' ']'
 simple-expression -> incor-expression
 incor-expression -> exor-expression
 incor-expression -> incor-expression '|' exor-expression

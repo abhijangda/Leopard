@@ -59,15 +59,22 @@ namespace Compiler
 		}
 	}
 
-	public class ArrayType : Type
+	public class ArrayType : ReferenceType
 	{
 		public Type type {get; private set;}
-	
-		public ArrayType (Type type, int width) : base (type.ToString () + "[" + width + "]", 
-			Tag.ArrayType, type.width * width)
+		private int total_width;
+
+		public ArrayType (Type type, int width) : base (type.ToString () + "[" + width + "]",
+			Tag.ArrayType, Type.Long.width)
 		{
 			this.type = type;
 			this.width = width;
+			total_width = type.width * width;
+		}
+
+		public override int getTotalWidth ()
+		{
+			return total_width;
 		}
 	}
 
@@ -81,30 +88,48 @@ namespace Compiler
 		}
 	}
 
-	public class ClassType : Type
+	public abstract class ReferenceType : Type
+	{
+		public override int width
+		{
+			get
+			{
+				return Type.Long.width;
+			}
+		}
+
+		public abstract int getTotalWidth ();
+
+		protected ReferenceType (string s, Tag _tag, int width): base (s, _tag, Type.Long.width)
+		{
+		}
+	}
+
+	public class ClassType : ReferenceType
 	{
 		public SymbolTable symTable {get; private set;}
 		public string name {get; private set;}
 		public ClassType parent {get; private set;}
-
+		
 		public override int width 
 		{
-			get 
-			{
-				int i = 0;
-				ClassType type = this;
-				while (type != null)
-				{
-					i += type.symTable.getTotalSize ();
-					type = type.parent;
-				}
-
-				return i;
-			}
 			set 
 			{
 				base.width = value;
 			}
+		}
+
+		public override int getTotalWidth ()
+		{
+			int i = 0;
+			ClassType type = this;
+			while (type != null)
+			{
+				i += type.symTable.getTotalSize ();
+				type = type.parent;
+			}
+
+			return i;
 		}
 
 		public ClassType (string name, SymbolTable classSymTable, 
@@ -192,7 +217,7 @@ namespace Compiler
 			return null;
 		}
 
-		public ClassType getClassType (string w)
+		public Type getClassType (string w)
 		{
 			SymbolTable symTable = this;
 
@@ -205,6 +230,19 @@ namespace Compiler
 				if (t is ClassType)
 					return (ClassType)t;
 			}
+
+			if (w == "int")
+				return Type.Integer;
+			if (w == "short")
+				return Type.Short;
+			if (w == "char")
+				return Type.Character;
+			if (w == "string")
+				return Type.TypeString;
+			if (w == "float")
+				return Type.Float;
+			if (w == "double")
+				return Type.Double;
 
 			return null;
 		}

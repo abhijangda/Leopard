@@ -273,6 +273,11 @@ namespace Compiler
 		public string getLoadInstruction (Type optype, string op, Dictionary <string, int> dictNumber, 
 			Dictionary <string, int> argDictNumber, bool isArgument, string indent)
 		{
+			if (optype is TemporaryType)
+			{
+				return "";
+			}
+
 			if (optype is ConstantType)
 			{
 				return indent + getPushInstructionForConst ((ConstantType)optype, op) + "\n";
@@ -282,9 +287,6 @@ namespace Compiler
 			{
 				return getLoadInstructionForMember (op, dictNumber, argDictNumber,
 					isArgument, indent);
-			}
-			else if (optype is ArrayType)
-			{
 			}
 
 			return indent + getLocalsLoadInstruction (op, dictNumber, argDictNumber, isArgument) + "\n";
@@ -368,7 +370,7 @@ namespace Compiler
 				else if (Regex.IsMatch (matches[i].Value, @"\s*.ctor.+"))
 				{
 					machineCode += matches[i].Value + "\n";
-					currSymbolTable = ((ConstructorType)rootSymbolTable.getType (matches[i].Value.Split (" ".ToCharArray(), 3)[1])).symTable;
+					currSymbolTable = ((ConstructorType)currSymbolTable.getType (matches[i].Value.Split (" ".ToCharArray(), 3)[2])).symTable;
 				}
 				else if (Regex.IsMatch (matches[i].Value, @"\s*.method.+"))
 				{
@@ -481,12 +483,33 @@ namespace Compiler
 					string trimed = matches[i].Value.TrimStart();
 					machineCode += indent + trimed.Replace ("goto", "br") + "\n";
 				}
+				else if (Regex.IsMatch (matches[i].Value, @"\s*[\w\d]+\s*=\s*new\s*[\w\d]+\s*\[\s*\d+\s*\]"))
+				{
+					string trimed = matches[i].Value.TrimStart();
+					string typename = trimed.Substring(trimed.IndexOf("new") + "new".Length, 
+						trimed.IndexOf ("[") - trimed.IndexOf("new") - "new".Length).Trim ();
+					string result = trimed.Substring(0, trimed.IndexOf(" ="));
+					string size = trimed.Substring (trimed.IndexOf ("[") + 1,
+						trimed.IndexOf ("]") - trimed.IndexOf ("[") - 1).TrimEnd ();
+
+					Type sizetype = getTypeForString (size, currSymbolTable, tempSymbolTable,
+						currParamSymTable, out isArgument);
+					machineCode += getLoadInstruction (sizetype, size, dictNumber, argDictNumber,
+						isArgument, indent);
+
+					machineCode += indent + "newarr " + typename + "\n";
+
+					Type typeresult = getTypeForString (result, currSymbolTable, tempSymbolTable, 
+						currParamSymTable, out isArgument);
+					machineCode += getStoreInstruction (result, typeresult, dictNumber, argDictNumber, 
+						isArgument, indent) + "\n";
+				}
 				else if (Regex.IsMatch (matches[i].Value, @"\s*[\w\d]+\s*=\s*new\s*[\w\d]+"))
 				{
 					//new operator call
 					string trimed = matches[i].Value.TrimStart();
 					string typename = trimed.Substring(trimed.IndexOf("new") + "new".Length).Trim ();
-					string result = trimed.Substring(trimed.IndexOf(" ="));
+					string result = trimed.Substring(0, trimed.IndexOf(" ="));
 					bool isresultArgument;
 
 					Type functype = getTypeForString (result, currSymbolTable, tempSymbolTable,
@@ -496,8 +519,6 @@ namespace Compiler
 
 					Type typeresult = getTypeForString (result, currSymbolTable, tempSymbolTable, 
 						currParamSymTable, out isresultArgument);
-
-					//if (typeresult is ConstantType) This can't happen
 					machineCode += getStoreInstruction (result, typeresult, dictNumber, argDictNumber, 
 						isresultArgument, indent) + "\n";
 				}
@@ -545,6 +566,61 @@ namespace Compiler
 					machineCode += getCallInstructionForMethod (func, (FunctionType)functype, dictNumber, argDictNumber,
 						isArgument, indent);
 				}
+				else if (Regex.IsMatch (matches[i].Value, @"\s*[\w\d]+\s*=\s*[\w\d]+\s*\[[\w\d]+\]"))
+				{
+					string trimed = matches[i].Value.TrimStart();
+					string result_instruction = "";
+					string result = trimed.Substring(0, trimed.IndexOf(" ="));
+					string source_array = trimed.Substring(trimed.IndexOf ("=") + 1, trimed.IndexOf("[") - trimed.IndexOf ("=") - 1).Trim ();
+					string source_index = trimed.Substring(trimed.IndexOf("[") + 1, 
+						trimed.IndexOf("]") - trimed.IndexOf("[") - 1);
+					bool isresultArgument, isSourceArgument;
+
+					Type typesource = getTypeForString (source_array, currSymbolTable, tempSymbolTable, 
+						currParamSymTable, out isresultArgument);
+					machineCode += getLoadInstruction (typesource, source_array, dictNumber, argDictNumber, 
+						isresultArgument, indent) + "\n";
+
+					Type typesource_index = getTypeForString (source_index, currSymbolTable, tempSymbolTable, 
+						currParamSymTable, out isresultArgument);
+					machineCode += getLoadInstruction (typesource_index, source_index, dictNumber, argDictNumber,
+						isresultArgument, indent);
+
+					machineCode += indent + "ldelem\n";
+	
+					Type resulttype = getTypeForString (result, currSymbolTable, tempSymbolTable,
+						currParamSymTable, out isSourceArgument);
+					machineCode += getStoreInstruction (result, resulttype, dictNumber, argDictNumber,
+						isSourceArgument, indent);
+				}
+				else if (Regex.IsMatch (matches[i].Value, @"\s*[\w\d]+\s*\[[\w\d]+\]\s*=\s*[\w\d]+"))
+				{
+					string trimed = matches[i].Value.TrimStart();
+					string result_instruction = "";
+					string result = trimed.Substring(0, trimed.IndexOf(" ="));
+					string result_array = result.Substring(0, result.IndexOf("["));
+					string result_index = result.Substring(result.IndexOf("[") + 1, 
+						result.IndexOf("]") - result.IndexOf("[") - 1);
+					string source = trimed.Substring(trimed.IndexOf("=") + 1).Trim ();
+					bool isresultArgument, isSourceArgument;
+
+					Type typeresult = getTypeForString (result_array, currSymbolTable, tempSymbolTable, 
+						currParamSymTable, out isresultArgument);
+					machineCode += getLoadInstruction (typeresult, result_array, dictNumber, argDictNumber, 
+						isresultArgument, indent) + "\n";
+
+					Type typeresult_index = getTypeForString (result_index, currSymbolTable, tempSymbolTable, 
+						currParamSymTable, out isresultArgument);
+					machineCode += getLoadInstruction (typeresult_index, result_index, dictNumber, argDictNumber,
+						isresultArgument, indent);
+
+					Type sourcetype = getTypeForString (source, currSymbolTable, tempSymbolTable,
+						currParamSymTable, out isSourceArgument);
+					machineCode += getLoadInstruction (sourcetype, source, dictNumber, argDictNumber,
+						isSourceArgument, indent);
+
+					machineCode += indent + "stelem\n";
+				}
 				else if (Regex.IsMatch (matches[i].Value, @"\s*[\w\d]+\s*=\s*[\w\d]+$"))
 				{
 					string trimed = matches[i].Value.TrimStart();
@@ -571,6 +647,7 @@ namespace Compiler
 				{
 					foreach (string op in operators)
 					{
+						//Include case when an array element is set
 						if (Regex.IsMatch (matches[i].Value, @"\s*[\w\d]+\s*=\s*[\w\d]+\s*\" + op + @"\s*[\w\d]+$"))
 						{
 							string instruction = getInstructionFromOp (op);

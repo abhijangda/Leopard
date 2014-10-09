@@ -124,6 +124,8 @@ namespace Compiler
 				return new FunctionCall ();
 			if (p.head.ToString () == "constructor-call")
 				return new ConstructorCall ();
+			if (p.head.ToString () == "array-constructor-call")
+				return new ArrayConstructorCall ();
 			if (p.head.ToString () == "mutable" && 
 				p.body.Count == 4)
 				return new ArrayIndexNode ();
@@ -231,7 +233,6 @@ namespace Compiler
 							nodesToReduce.Add (n);
 						}
 					}
-
 
 					if (nodesToReduce.Count != 0)
 					{

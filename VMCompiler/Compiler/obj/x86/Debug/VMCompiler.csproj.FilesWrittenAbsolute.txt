@@ -1,0 +1,5 @@
+/media/sda11/C#/VMCompiler/Compiler/obj/x86/Debug/.NETFramework,Version=v4.5.AssemblyAttribute.cs
+/media/sda11/C#/VMCompiler/Compiler/bin/Debug/Compiler.exe.mdb
+/media/sda11/C#/VMCompiler/Compiler/bin/Debug/Compiler.exe
+/media/sda11/C#/VMCompiler/Compiler/obj/x86/Debug/Compiler.exe
+/media/sda11/C#/VMCompiler/Compiler/obj/x86/Debug/Compiler.exe.mdb

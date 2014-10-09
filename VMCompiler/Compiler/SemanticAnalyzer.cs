@@ -196,7 +196,7 @@ namespace Compiler
 					return false;
 				}
 
-				if (newNode.constructorCall.arglist.listNodes.Count != 
+				/*if (newNode.constructorCall.arglist.listNodes.Count != 
 				    ((ConstructorType)type).listParamTypes.Count)
 				{
 					error = new CompileError ("No of formal paramters is not equal to actual parameters", 
@@ -213,7 +213,7 @@ namespace Compiler
 						                          linenumber);
 						return false;
 					}
-				}
+				}*/
 			}
 			else if (node is LocalDeclarationNode)
 			{

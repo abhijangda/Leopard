@@ -287,28 +287,28 @@ namespace Compiler
 
 	public class Type : Word
 	{
-		public static readonly Type Integer;
-		public static readonly Type Character;
-		public static readonly Type Short;
-		public static readonly Type Long;
-		public static readonly Type Double;
-		public static readonly Type Void;
-		public static readonly Type Float;
-		public static readonly Type TypeString;
+		public static readonly ValueType Integer;
+		public static readonly ValueType Character;
+		public static readonly ValueType Short;
+		public static readonly ValueType Long;
+		public static readonly ValueType Double;
+		public static readonly ValueType Void;
+		public static readonly ValueType Float;
+		public static readonly ValueType TypeString;
 		public virtual int width {get; set;}
 
 		static Type ()
 		{
-			Integer = new Type ("int", Tag.Int, 4);
-			Character = new Type ("char", Tag.Char, 1);
-			Short = new Type ("short", Tag.Short, 2);
-			Long = new Type ("long", Tag.Long, 8);
-			Double = new Type ("double", Tag.Double, 8);
-			Void = new Type ("void", Tag.Void, 1);
-			Float = new Type ("float", Tag.Float, 4);
-			TypeString = new Type ("string", Tag.String, 0); 
+			Integer = new ValueType ("int", Tag.Int, 4);
+			Character = new ValueType ("char", Tag.Char, 1);
+			Short = new ValueType ("short", Tag.Short, 2);
+			Long = new ValueType ("long", Tag.Long, 8);
+			Double = new ValueType ("double", Tag.Double, 8);
+			Void = new ValueType ("void", Tag.Void, 1);
+			Float = new ValueType ("float", Tag.Float, 4);
+			TypeString = new ValueType ("string", Tag.String, 0); 
 		}
-
+	
 		public Type (string s, Tag _tag, int w) : base (s, _tag)
 		{
 			width = w;
@@ -343,6 +343,13 @@ namespace Compiler
 
 			else 
 				return t2;
+		}
+	}
+
+	public class ValueType : Type
+	{	
+		public ValueType (string _s, Tag _tag, int w) : base (_s, _tag, w)
+		{
 		}
 	}
 

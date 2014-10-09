@@ -22,6 +22,7 @@
 6 push.l <long> //Push Long onto the stack
 7 push.f <float> //Push num of type float
 8 push.d <double> //Push num of type double
+9 push.c <char> //Push character 
 9 dup //Duplicate the value on the top of the stack.
 10 conv.b //Convert the top of stack to byte
 11 conv.s //Convert the top of stack to short
@@ -29,6 +30,7 @@
 13 conv.l //Convert the top of stack to long
 14 conv.f //Convert the top of stack to float
 15 conv.d //Convert the top of stack to double
+15 conv.c //Convert the top of stack to character
 16 conv <class> //Convert the top of stack to class
 17 call <method> //Call method described by method.  
 18 br <label> //Branch to target.  
@@ -64,11 +66,12 @@
 67 push.field <field> //Push the value of field of object (or value type) obj, onto the stack. Object model instruction
 68 push.fielda  <field> //Push the address of field of object obj on the stack. Object model instruction
 69 ld.field <field> //Replace the value of field of the object obj with value. Object model instruction
-70 newarr <etype> //Create a new array with elements of type etype and copies its address to register given.
+70 newarr <etype> //Create a new array with elements of type etype and pushes its address to stack.
 71 ld.len //Copy the length of array in the register.
 72 push.len //Push the length of array on the stack
 73 push.elema <class> //push the address of element at index onto the top of the stack. Object model instruction     
 74 stelem //Replace array (third topmost element on stack) element at index (second topmost element on stack) with the value on the stack Object model instruction
+75 ldelem //Load the array (second topmost element on stack) element at index (topmost element on stack)
 75 new <type>  //Create a new object of type and push its address to register
 76 returnval //Return the value on the top of the stack
 78 return //Return the function

@@ -306,6 +306,8 @@ namespace Compiler
 				return indent + "conv.f\n";
 			if (type == "double")
 				return indent + "conv.d\n";
+			if (type == "char")
+				return indent + "conv.c\n";
 			return indent + "conv " + type + "\n";
 		}
 

@@ -41,6 +41,7 @@ namespace Compiler
 
 	public class ConstructorType : MemberType
 	{
+		public SymbolTable paramSymTable {get; private set;}
 		public List<Type> listParamTypes;
 		public SymbolTable symTable {get; private set;}
 		public ConstructorType (AccessSpecifier spec, Type type,
@@ -48,12 +49,18 @@ namespace Compiler
 			base (spec, type, false, parentType)
 		{
 			this.symTable = symTable;
+			paramSymTable = new SymbolTable (null, this);
+			listParamTypes = new List<Type> ();
+
 			if (paramList != null)
 			{
 				foreach (ASTNode node in paramList.listNodes)
 				{
+					listParamTypes.Add (((ParameterNode)node).type);
 					symTable.dict.Add (((ParameterNode)node).id, 
-					                   ((ParameterNode)node).type);
+						((ParameterNode)node).type);
+					paramSymTable.dict.Add (((ParameterNode)node).id, 
+						((ParameterNode)node).type);
 				}
 			}
 		}
@@ -247,6 +254,17 @@ namespace Compiler
 			return null;
 		}
 
+		public ConstructorType getConstructorType (string w)
+		{
+			SymbolTable symbolTable = this;
+
+			while (symbolTable.parent != null)
+				symbolTable = symbolTable.parent;
+
+			ClassType classType = (ClassType)symbolTable.getClassType (w);
+			return (ConstructorType)classType.symTable.getType (w);
+		}
+	
 		public Type getType (string w)
 		{
 			SymbolTable symTable = this;

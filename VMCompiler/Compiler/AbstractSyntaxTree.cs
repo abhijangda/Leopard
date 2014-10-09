@@ -233,7 +233,7 @@ namespace Compiler
 
 		public override Type getType (SymbolTable symTable)
 		{
-			return ((ClassType)symTable.getType (objectName)).symTable.getType (memberName);
+ 			return ((ClassType)symTable.getType (objectName)).symTable.getType (memberName);
 		}
 
 		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
@@ -941,6 +941,9 @@ namespace Compiler
 
 		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
 		{
+			while (symTable.parent != null)
+				symTable = symTable.parent;
+
 			foreach (ASTNode node in nodes)
 			{
 				if (node is IDNode)

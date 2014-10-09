@@ -68,11 +68,14 @@ namespace Compiler
 				}
 			}
 
-			t = currParamSymTable.getType (s);
-			if (t != null)
+			if (currParamSymTable != null)
 			{
-				isArgument = true;
-				return t;
+				t = currParamSymTable.getType (s);
+				if (t != null)
+				{
+					isArgument = true;
+					return t;
+				}
 			}
 
 			return currSymbolTable.getType (s);
@@ -372,7 +375,69 @@ namespace Compiler
 				else if (Regex.IsMatch (matches[i].Value, @"\s*.ctor.+"))
 				{
 					machineCode += matches[i].Value + "\n";
-					currSymbolTable = ((ConstructorType)currSymbolTable.getType (matches[i].Value.Split (" ".ToCharArray(), 3)[2])).symTable;
+					string constructor = matches[i].Value.Substring (matches[i].Value.IndexOf ("Public") + "Public".Length,
+						matches[i].Value.IndexOf ("(") - (matches[i].Value.IndexOf ("Public") + "Public".Length)).Trim ();
+					ConstructorType funcType = ((ConstructorType)currSymbolTable.getType (constructor));
+					currSymbolTable = funcType.symTable;
+					currParamSymTable = funcType.paramSymTable;
+
+					while (i < matches.Count && !Regex.IsMatch (matches[i].Value, @"\s*{"))
+					{
+						i++;
+					}
+
+					machineCode += matches [i].Value + "\n";
+					if (Regex.IsMatch (matches[i+1].Value, @"\s*}"))
+					{
+						i++;
+						continue;
+					}
+					Dictionary<string, Type>.Enumerator e = currSymbolTable.dict.GetEnumerator ();
+					dictNumber = new Dictionary<string, int> ();
+					machineCode += indent + ".total_locals " + currSymbolTable.dict.Count + "\n";
+					int j = 0;
+					machineCode += indent + ".locals (\n";
+					do
+					{
+						if (e.Current.Key == null)
+						{
+							continue;
+						}
+
+						if (currParamSymTable.dict.ContainsKey (e.Current.Key))
+						{
+							continue;
+						}
+
+						dictNumber.Add (e.Current.Key, j);
+						machineCode += indent + "   " + j + " " + e.Current.Value.ToString () + " " +
+							e.Current.Value.width + ",\n";
+						j++;
+					}
+					while (e.MoveNext ());
+
+					argDictNumber = new Dictionary<string, int> ();
+					e = currParamSymTable.dict.GetEnumerator ();
+					j = 0;
+
+					if (funcType.isStatic)
+					{
+						j = 1;
+					}
+
+					do
+					{
+						if (e.Current.Key == null)
+						{
+							continue;
+						}
+
+						argDictNumber.Add (e.Current.Key, j);
+						j++;
+					}
+					while (e.MoveNext ());
+
+					machineCode += indent + ")\n";
 				}
 				else if (Regex.IsMatch (matches[i].Value, @"\s*.method.+"))
 				{
@@ -514,10 +579,8 @@ namespace Compiler
 					string result = trimed.Substring(0, trimed.IndexOf(" ="));
 					bool isresultArgument;
 
-					Type functype = getTypeForString (result, currSymbolTable, tempSymbolTable,
-						currParamSymTable, out isArgument);
-					machineCode += "new " + getCallInstructionForMethod (result, (FunctionType)functype, dictNumber, argDictNumber,
-						isArgument, indent);
+					Type functype = currSymbolTable.getConstructorType (typename);
+					machineCode += indent + "new " + typename + "\n";
 
 					Type typeresult = getTypeForString (result, currSymbolTable, tempSymbolTable, 
 						currParamSymTable, out isresultArgument);

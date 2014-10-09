@@ -1,12 +1,23 @@
 class A
 {
+	public int k;
+	public A ()
+	{
+		int k;
+
+		k = 0;
+	}
+
     public void s ()
     {
-		int b[10];
+		A a;
+		int j;
 
-		b = new int[10];
+		a = new A();
 
-		b[1] = b[2] + b[3];
+		a.k = 0;
+
+		j = 2 * a.k;
     }
 }
 

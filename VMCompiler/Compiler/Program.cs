@@ -4,7 +4,6 @@ using LanguageGrammar;
 using System.Collections.Generic;
 
 /*
-TODO: Add String support 
 TODO: Correct MemberAccessNode's Three Address Code
 TODO: May have to include types in instruction also like stdarg.i4 or call p (int32, int64)
 */

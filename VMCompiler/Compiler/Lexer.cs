@@ -406,6 +406,8 @@ namespace Compiler
 				peek = fileString [pos];
 				pos ++;
 			}
+			else
+				peek = '$';
 
 //			peek = (char)Console.Read ();
 		}

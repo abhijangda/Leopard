@@ -1,12 +1,14 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Compiler/AbstractSyntaxTree.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Compiler/test">
     <Files>
-      <File FileName="Compiler/CodeGenerator.cs" Line="117" Column="16" />
-      <File FileName="Compiler/Program.cs" Line="38" Column="1" />
-      <File FileName="Compiler/Parser.cs" Line="323" Column="1" />
-      <File FileName="Compiler/AbstractSyntaxTree.cs" Line="499" Column="24" />
-      <File FileName="Compiler/SymbolTable.cs" Line="191" Column="7" />
+      <File FileName="Compiler/Parser.cs" Line="324" Column="18" />
+      <File FileName="Compiler/CodeGenerator.cs" Line="65" Column="19" />
+      <File FileName="Compiler/SymbolTable.cs" Line="265" Column="4" />
+      <File FileName="Compiler/Lexer.cs" Line="410" Column="15" />
+      <File FileName="Compiler/test" Line="22" Column="2" />
+      <File FileName="Compiler/Program.cs" Line="1" Column="1" />
+      <File FileName="Compiler/AbstractSyntaxTree.cs" Line="1" Column="1" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>

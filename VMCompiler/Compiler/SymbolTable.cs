@@ -262,6 +262,7 @@ namespace Compiler
 				symbolTable = symbolTable.parent;
 
 			ClassType classType = (ClassType)symbolTable.getClassType (w);
+
 			return (ConstructorType)classType.symTable.getType (w);
 		}
 	

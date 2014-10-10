@@ -15,6 +15,6 @@ To compile Compiler run following command:
     ./run.sh <file to compile>
 
 Current Status:
-* Compiler is completed
+* Compiler is completed. It gives the VM's bytecode instructions for a given output. Semantic Analysis and Error Reporting needs to be improved.
 * Assembler is pending
 * Virtual Machine is pending

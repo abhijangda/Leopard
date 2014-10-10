@@ -18,7 +18,7 @@ namespace Compiler
 		public SymbolTable symTableTree;
 		List<CompileError> errors;
 
-		public Parser ()
+		public Parser (string file)
 		{
 			string grammar = File.ReadAllText ("./../../language");
 			g = new Grammar (grammar);
@@ -27,7 +27,7 @@ namespace Compiler
 			g.createGoToTable ();
 
 			//g.displayStates ();
-			lexer = new Lexer ();
+			lexer = new Lexer (file);
 			stackStates = new Stack<int> ();
 			stackStates.Push (0);
 

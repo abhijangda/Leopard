@@ -4,7 +4,6 @@ using LanguageGrammar;
 using System.Collections.Generic;
 
 /*
-TODO: Correct MemberAccessNode's Three Address Code
 TODO: May have to include types in instruction also like stdarg.i4 or call p (int32, int64)
 */
 
@@ -30,15 +29,12 @@ namespace Compiler
 
 		public static void Main (string[] args)
 		{
-			/*string grammar = File.ReadAllText ("./../../language");
-			Grammar g = new Grammar (grammar);
-			List<Terminal> l = new List<Terminal> ();
-			l.Add (Grammar.EndMarker);
-			Item i = new Item (g.startProduction, 0, l);
-			State s = new State (0, i);
+			string file = "./../../test";
 
-			g.createGoTo ();*/
-			Parser p = new Parser ();
+			if (args.Length >= 1)
+				file = args[0];
+	
+			Parser p = new Parser (file);
 			InterCodeGen intercodegen = new InterCodeGen (p.startParsing (), p.symTableTree);
 			string intercode = intercodegen.generate ();
 			Console.WriteLine ("\n" + intercode + "\n");

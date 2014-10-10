@@ -361,7 +361,7 @@ namespace Compiler
 		int pos;
 		String fileString;
 
-		public Lexer ()
+		public Lexer (string file)
 		{
 			words = new Dictionary<string, Word> ();
 
@@ -389,7 +389,7 @@ namespace Compiler
 
 			//strLine = Console.ReadLine ();
 			//pos = 0;
-			fileString = File.ReadAllText ("./../../test");
+			fileString = File.ReadAllText (file);
 			pos = 0;
 			line = 1;
 		}

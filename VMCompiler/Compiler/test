@@ -1,22 +1,7 @@
 class A
 {
-	public int k;
-	public A ()
-	{
-		int k;
-
-		k = 0;
-	}
-
-    public void s ()
+	public static void main ()
     {
-		A a;
-		int j;
-
-		a = new A();
-
-		a.k = 0;
-
-		j = 2 * a.k;
+		
     }
 }

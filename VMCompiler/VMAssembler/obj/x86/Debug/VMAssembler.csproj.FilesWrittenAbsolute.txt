@@ -1,0 +1,5 @@
+/media/sda11/C#/VMCompiler/VMAssembler/obj/x86/Debug/.NETFramework,Version=v4.0.AssemblyAttribute.cs
+/media/sda11/C#/VMCompiler/VMAssembler/bin/Debug/VMAssembler.dll.mdb
+/media/sda11/C#/VMCompiler/VMAssembler/bin/Debug/VMAssembler.dll
+/media/sda11/C#/VMCompiler/VMAssembler/obj/x86/Debug/VMAssembler.dll
+/media/sda11/C#/VMCompiler/VMAssembler/obj/x86/Debug/VMAssembler.dll.mdb

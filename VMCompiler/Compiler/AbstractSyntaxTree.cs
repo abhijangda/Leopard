@@ -1081,7 +1081,7 @@ namespace Compiler
 
 			if (isStatic)
 				s += " static";
-			s += " " + typeName + " " + name;;
+			s += " " + typeName + " " + name;
 
 			return new Code (getIndentString (indent) + s, "");
 		}
@@ -1226,9 +1226,12 @@ namespace Compiler
 		{
 			string s = getIndentString (indent);
 			string toadd = ".method ";
+			if (name == "main" && accessSpecifier == AccessSpecifier.Public && isStatic == true)
+				toadd += ".entrypoint ";
+
 			if (this is ConstructorDefinition)
 				toadd = ".ctor ";
-	
+
 			if (paramList != null)
 			{
 				s += toadd + base.generateCode (currSymTable, rootSymTable, 0).code + " " + 

@@ -3,3 +3,5 @@
 /media/sda11/C#/VMCompiler/Compiler/bin/Debug/Compiler.exe
 /media/sda11/C#/VMCompiler/Compiler/obj/x86/Debug/Compiler.exe
 /media/sda11/C#/VMCompiler/Compiler/obj/x86/Debug/Compiler.exe.mdb
+/media/sda11/C#/VMCompiler/Compiler/bin/Debug/VMAssembler.dll
+/media/sda11/C#/VMCompiler/Compiler/bin/Debug/VMAssembler.dll.mdb

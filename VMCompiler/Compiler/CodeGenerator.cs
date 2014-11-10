@@ -458,6 +458,7 @@ namespace Compiler
 						i++;
 						continue;
 					}
+
 					Dictionary<string, Type>.Enumerator e = currSymbolTable.dict.GetEnumerator ();
 					dictNumber = new Dictionary<string, int> ();
 					machineCode += indent + ".total_locals " + currSymbolTable.dict.Count + "\n";

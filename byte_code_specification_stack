@@ -1,15 +1,5 @@
 // 8 Byte Instruction Code
-// A Hybrid VM. A Stack, a code memory and registers
-// Registers for every data type
-// 5 64-bit Registers A8, B8, C8, D8, E8. 
-// Their 32-bit Registers can be accessed with A4, B4, C4, D4, E4.
-// Their 16-bit Registers can be accessed with A2, B2, C2, D2, E2.
-// Their 8-bit Registers can be accessed with A1, B1, C1, D1, E1.
-// 5 Double Float Registers DA, DB, DC, DD, DE
-// 5 Float Registers FA, FB, FC, FD, FE
-// 5 Utf-16 Character Registers U16A, U16B, U16C, U16D, U16E
-// 5 ASCII Character Registers CA, CB, CC, CD, CE These are the lower 7-bits of above Utf-16 registers.
-// 5 Object Reference Registers REFA, REFB, REFC, REFD, REFE
+// A Stack VM. A Stack and a code memory
 // A Variable of any Data Type be it struct could be pushed to/poped from Stack.
 // Parameters to a function will be passed on the stack. First Argument is pushed last and so on.
 // Function will pop the parameters one by one. With First Argument as the first poped argument.
@@ -23,59 +13,59 @@
 7 push.f <float> //Push num of type float
 8 push.d <double> //Push num of type double
 9 push.c <char> //Push character 
-9 dup //Duplicate the value on the top of the stack.
-10 conv.b //Convert the top of stack to byte
-11 conv.s //Convert the top of stack to short
-12 conv.i //Convert the top of stack to integer
-13 conv.l //Convert the top of stack to long
-14 conv.f //Convert the top of stack to float
-15 conv.d //Convert the top of stack to double
-15 conv.c //Convert the top of stack to character
-16 conv <class> //Convert the top of stack to class
-17 call <method> //Call method described by method.  
-18 br <label> //Branch to target.  
+10 dup //Duplicate the value on the top of the stack.
+11 conv.b //Convert the top of stack to byte
+12 conv.s //Convert the top of stack to short
+13 conv.i //Convert the top of stack to integer
+14 conv.l //Convert the top of stack to long
+15 conv.f //Convert the top of stack to float
+16 conv.d //Convert the top of stack to double
+17 conv.c //Convert the top of stack to character
+18 conv <class> //Convert the top of stack to class
+19 call <method> //Call method described by method.  
+20 br <label> //Branch to target.  
 21 brzero  <label> //Branch to target if value is zero (alias for brfalse).  
-24 beq  <label> //Branch to target if equal.  
-25 bge  <label> //Branch to target if greater than or equal to.  
-26 bgt  <label> //Branch to target if greater than.  
-27 ble  <label> //Branch to target if less than or equal to.  
-28 blt  <label> //Branch to target if less than.  
-34 add //Add two values, and push the result on the stack
-35 sub //Subtract value2 from value1, and push the result on the stack
-36 mul   //Multiply values.  and push the result on the stack
-37 div   //Divide two values to return a quotient in floating point and push the result on the stack
-38 div.un   //Divide two values, unsigned, returning a quotient and push the result on the stack
-39 rem   //Remainder when dividing one value by another and push the result on the stack
-40 rem.un   //Remainder when dividing one unsigned value by another and push the result on the stack
-41 and   //Bitwise AND of two integral values, and push the result on the stack
-42 or   //Bitwise OR of two integer values, and push the result on the stack  
-43 xor   //Bitwise XOR of integer values, and push the result on the stack
-44 shl  //Shift an integer left (shifting in zeros), and push the result on the stack
-45 shr  //Shift an integer right (shift in sign), and push the result on the stack
-46 shr.un  //Shift an integer right (shift in zero), and push the result on the stack
-47 neg  //Negate value. and push the result on the stack
-48 not  //Bitwise complement (logical not). and push the result on the stack
-49 le //Push 1 to stack if less than or equal to else 0
-50 ge //Push 1 to stack if greater than or equal to else 0
-51 lt //Push 1 to stack if less than else 0
-52 gt //Push 1 to stack if greater than else 0
-53 eq //Push 1 to stack if equal to else 0
-54 ne //Push 1 to stack if not equal to else 0
-65 push.str <string> //Push a string object for the literal string.
-66 push.str2 //Push a string object for the literal string and copies its address to the register
-67 push.field <field> //Push the value of field of object (or value type) obj, onto the stack. Object model instruction
-68 push.fielda  <field> //Push the address of field of object obj on the stack. Object model instruction
-69 ld.field <field> //Replace the value of field of the object obj with value. Object model instruction
-70 newarr <etype> //Create a new array with elements of type etype and pushes its address to stack.
-71 ld.len //Copy the length of array in the register.
-72 push.len //Push the length of array on the stack
-73 push.elema <class> //push the address of element at index onto the top of the stack. Object model instruction     
-74 stelem //Replace array (third topmost element on stack) element at index (second topmost element on stack) with the value on the stack Object model instruction
-75 ldelem //Load the array (second topmost element on stack) element at index (topmost element on stack)
-75 new <type>  //Create a new object of type and push its address to register
-76 returnval //Return the value on the top of the stack
-78 return //Return the function
-79 ldloc <uint16 (indx)> //Load local variable of index indx onto stack.
-80 stloc <uint16 (indx)> //Pop a value from stack into local variable indx.
-81 ldfield <field> //Load the field of object
-82 stfield <field>
+22 beq  <label> //Branch to target if equal.  
+23 bge  <label> //Branch to target if greater than or equal to.  
+24 bgt  <label> //Branch to target if greater than.  
+25 ble  <label> //Branch to target if less than or equal to.  
+26 blt  <label> //Branch to target if less than.  
+27 add //Add two values, and push the result on the stack
+28 sub //Subtract value2 from value1, and push the result on the stack
+29 mul   //Multiply values.  and push the result on the stack
+30 div   //Divide two values to return a quotient in floating point and push the result on the stack
+31 div.un   //Divide two values, unsigned, returning a quotient and push the result on the stack
+32 rem   //Remainder when dividing one value by another and push the result on the stack
+33 rem.un   //Remainder when dividing one unsigned value by another and push the result on the stack
+34 and   //Bitwise AND of two integral values, and push the result on the stack
+35 or   //Bitwise OR of two integer values, and push the result on the stack  
+36 xor   //Bitwise XOR of integer values, and push the result on the stack
+37 shl  //Shift an integer left (shifting in zeros), and push the result on the stack
+38 shr  //Shift an integer right (shift in sign), and push the result on the stack
+39 shr.un  //Shift an integer right (shift in zero), and push the result on the stack
+40 neg  //Negate value. and push the result on the stack
+41 not  //Bitwise complement (logical not). and push the result on the stack
+42 le //Push 1 to stack if less than or equal to else 0
+43 ge //Push 1 to stack if greater than or equal to else 0
+44 lt //Push 1 to stack if less than else 0
+45 gt //Push 1 to stack if greater than else 0
+46 eq //Push 1 to stack if equal to else 0
+47 ne //Push 1 to stack if not equal to else 0
+48 push.str <string> //Push a string object for the literal string.
+49 push.str2 //Push a string object for the literal string and copies its address to the register
+50 push.field <field> //Push the value of field of object (or value type) obj, onto the stack. Object model instruction
+51 push.fielda  <field> //Push the address of field of object obj on the stack. Object model instruction
+52 ld.field <field> //Replace the value of field of the object obj with value. Object model instruction
+53 newarr <etype> //Create a new array with elements of type etype and pushes its address to stack.
+54 ld.len //Copy the length of array in the register.
+55 push.len //Push the length of array on the stack
+56 push.elema <class> //push the address of element at index onto the top of the stack. Object model instruction     
+57 stelem //Replace array (third topmost element on stack) element at index (second topmost element on stack) with the value on the stack Object model instruction
+58 ldelem //Load the array (second topmost element on stack) element at index (topmost element on stack)
+59 new <type>  //Create a new object of type and push its address to register
+60 returnval //Return the value on the top of the stack
+61 return //Return the function
+62 ldloc <uint16 (indx)> //Load local variable of index indx onto stack.
+63 stloc <uint16 (indx)> //Pop a value from stack into local variable indx.
+64 ldfield <field> //Load the field of object
+65 stfield <field>

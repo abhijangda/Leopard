@@ -1,0 +1,140 @@
+stmts` -> class-definition-list
+
+class-definition-list -> class-definition-list class-definition
+class-definition-list -> class-definition
+
+field-declaration -> access-specifier 'static' type-specifier var-decl-initialize ';'
+field-declaration -> access-specifier type-specifier var-decl-initialize ';'
+local-declaration -> type-specifier var-decl-initialize ';'
+local-declaration -> local-array-declaration
+local-array-declaration -> type-specifier 'ID' '[' 'num' ']' ';'
+var-decl-initialize -> var-decl-id
+var-decl-id -> 'ID'
+
+type-specifier -> 'int'
+type-specifier -> 'double'
+type-specifier -> 'char'
+type-specifier -> 'void'
+type-specifier -> 'float'
+type-specifier -> 'long'
+type-specifier -> 'string'
+type-specifier -> 'ID'
+
+class-definition -> class-signature '{' member-declaration-list '}'
+class-definition -> class-signature '{' '}'
+class-definition -> class-with-parent-definition
+class-with-parent-definition -> class-signature-with-parent '{' member-declaration-list '}'
+class-with-parent-definition -> class-signature-with-parent '{' '}'
+class-signature -> 'class' 'ID'
+class-signature-with-parent -> 'class' 'ID' ':' 'ID'
+member-declaration-list -> member-declaration-list member-declaration
+member-declaration-list -> member-declaration
+member-declaration -> field-declaration
+member-declaration -> fun-definition
+fun-definition -> fun-signature compound-stmt
+fun-signature -> access-specifier type-specifier 'ID' '(' ')'
+fun-signature -> access-specifier type-specifier 'ID' '(' param-list ')'
+fun-signature -> access-specifier 'static' type-specifier 'ID' '(' ')'
+fun-signature -> access-specifier 'static' type-specifier 'ID' '(' param-list ')'
+fun-definition -> constructor-definition
+constructor-definition -> constructor-signature compound-stmt
+constructor-signature -> access-specifier 'ID' '(' param-list ')' ':' base-constructor-call
+constructor-signature -> access-specifier 'ID' '(' ')' ':' base-constructor-call
+constructor-signature -> access-specifier 'ID' '(' ')'
+constructor-signature -> access-specifier 'ID' '(' param-list ')'
+base-constructor-call -> 'base' '(' ')'
+base-constructor-call -> 'base' '(' param-list ')'
+access-specifier -> 'public'
+access-specifier -> 'private'
+access-specifier -> 'protected'
+
+param-list -> param-list ',' param-type-list 
+param-list -> param-type-list
+param-type-list -> type-specifier param-id
+param-id -> 'ID'
+
+statement -> expression-stmt
+statement -> compound-stmt
+statement -> selection-stmt
+statement -> iteration-stmt
+statement -> return-stmt
+statement -> break-stmt
+compound-stmt -> '{' local-declarations statement-list '}'
+compound-stmt -> '{' local-declarations '}'
+compound-stmt -> '{' statement-list '}'
+compound-stmt -> '{' '}'
+local-declarations -> local-declaration
+local-declarations -> local-declarations local-declaration
+statement-list -> statement-list statement
+statement-list -> statement
+expression-stmt -> expression ';'
+expression-stmt -> ';'
+selection-stmt -> 'if' '(' simple-expression ')' statement
+iteration-stmt -> 'while' '(' simple-expression ')' statement
+iteration-stmt -> 'for' '(' expression ';' expression ';' expression ')' statement
+return-stmt -> 'return' ';'
+return-stmt -> 'return' expression ';'
+break-stmt -> 'break' ';'
+
+expression -> mutable '=' expression
+expression -> simple-expression
+expression -> new-expression
+new-expression -> 'new' constructor-call
+constructor-call -> 'ID' '(' arg-list ')'
+constructor-call -> 'ID' '(' ')'
+constructor-call -> type-specifier '[' 'num' ']'
+simple-expression -> incor-expression
+incor-expression -> exor-expression
+incor-expression -> incor-expression '|' exor-expression
+exor-expression -> logical-and-expression
+exor-expression -> exor-expression '^' logical-and-expression
+logical-and-expression -> or-expression
+logical-and-expression -> logical-and-expression '&' or-expression
+or-expression -> or-expression '||' and-expression
+or-expression -> and-expression
+and-expression -> and-expression '&&' unary-rel-expression
+and-expression -> unary-rel-expression
+unary-rel-expression -> unary-op unary-rel-expression
+unary-rel-expression -> rel-expression
+unary-op -> '!'
+unary-op -> '~'
+rel-expression -> rel-expression relop shift-expression
+rel-expression -> shift-expression
+relop -> '<='
+relop -> '<'
+relop -> '>'
+relop -> '>=' 
+relop -> '=='
+relop -> '!='
+shift-expression -> sum-expression
+shift-expression -> shift-expression '<<' sum-expression
+shift-expression -> shift-expression '>>' sum-expression
+sum-expression -> sum-expression sumop term 
+sum-expression -> term
+sumop -> '+'
+sumop -> '-'
+term -> term mulop unary-expression
+term -> unary-expression
+mulop -> '*'
+mulop -> '/'
+mulop -> '%'
+unary-expression -> immutable
+unary-expression -> mutable
+mutable -> 'ID'
+mutable -> mutable '[' expression ']'
+mutable -> member-access
+member-access -> 'ID' '.' 'ID'
+immutable -> '(' expression ')'
+immutable -> call
+immutable -> constant
+immutable -> cast-expression
+cast-expression -> '(' type-specifier ')' expression
+call -> member-access '(' arg-list ')'
+call -> member-access '(' ')'
+call -> 'ID' '(' arg-list ')'
+call -> 'ID' '(' ')'
+arg-list -> arg-list ',' expression 
+arg-list -> expression
+constant -> 'num'
+constant -> 'string'
+constant -> 'character'

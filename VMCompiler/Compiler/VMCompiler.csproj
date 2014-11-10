@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
-    <ProductVersion>9.0.21022</ProductVersion>
+    <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{873E573B-CB6C-46FC-AC56-9F5A27017FFB}</ProjectGuid>
     <OutputType>Exe</OutputType>
@@ -52,4 +52,10 @@
     <Compile Include="CompileError.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <ProjectReference Include="..\VMAssembler\VMAssembler.csproj">
+      <Project>{51DF4058-9A0E-4BB2-87BB-54A1AB9AE278}</Project>
+      <Name>VMAssembler</Name>
+    </ProjectReference>
+  </ItemGroup>
 </Project>

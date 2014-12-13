@@ -3,21 +3,12 @@
   <MonoDevelop.Ide.Workbench ActiveDocument="VMAssembler/ClassInfo.cs">
     <Files>
       <File FileName="VMAssembler/Main.cs" Line="1" Column="1" />
-      <File FileName="VMAssembler/ClassInfo.cs" Line="160" Column="3" />
+      <File FileName="VMAssembler/ClassInfo.cs" Line="39" Column="32" />
       <File FileName="Compiler/CodeGenerator.cs" Line="1" Column="1" />
       <File FileName="Compiler/AbstractSyntaxTree.cs" Line="1" Column="1" />
       <File FileName="Compiler/Program.cs" Line="1" Column="1" />
       <File FileName="Compiler/SemanticAnalyzer.cs" Line="1" Column="1" />
     </Files>
-    <Pads>
-      <Pad Id="ProjectPad">
-        <State expanded="True">
-          <Node name="VMAssembler" expanded="True">
-            <Node name="ClassInfo.cs" selected="True" />
-          </Node>
-        </State>
-      </Pad>
-    </Pads>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore>

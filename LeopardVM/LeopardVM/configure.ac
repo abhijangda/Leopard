@@ -1,0 +1,7 @@
+AC_INIT(LeopardVM, 0.1)
+AM_INIT_AUTOMAKE([1.11 no-define foreign])
+AC_PROG_CXX
+AC_CONFIG_FILES([Makefile])
+#PKG_CHECK_MODULES([DEPS], [])
+AM_SILENT_RULES([no])
+AC_OUTPUT

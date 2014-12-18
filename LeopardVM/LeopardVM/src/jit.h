@@ -10,6 +10,8 @@ extern "C"
 #ifndef __JIT_H__
 #define __JIT_H__
 
+#define null 0
+
 typedef void (*pvfi)();
 
 enum OperatorType
@@ -35,6 +37,7 @@ enum LocationType
 };
 
 class VariableDescriptor;
+class TempDescriptor;
 
 class JITStack
 {
@@ -43,18 +46,22 @@ class JITStack
         int stackPointer;
         int stackBase;
         int stackSize;
+        int stackTempPointer;
 
     public:
         JITStack () : varStack ()
         {
             stackPointer = 0;
             stackBase = 0;
-            stackSize;
+            stackSize = 0;
         }
     
         void stackPush (jit_state* _jit, int reg, OperatorType type);
         void stackPop (jit_state* _jit, int reg, OperatorType type);
-        void allocateStack (jit_state* _jit, int size);
+        int allocateStack (jit_state* _jit, int size);
+        void copyMemToReg (jit_state* _jit, int loc, int reg, OperatorType type);
+        void allocateTemporary (jit_state *_jit, TempDescriptor* tempDesc);
+        void copyRegToMem (jit_state* _jit, int loc, int reg, OperatorType type);
 
         int getPointer () 
         {
@@ -110,6 +117,8 @@ class RegisterDescriptor
             assignedVar = null;
         }
     
+        void spill (JITStack *jitStack);
+
         int getRegister ()
         {
             return reg;
@@ -135,7 +144,7 @@ class VariableDescriptor
         int memLocation;
         VarType type;
         CurrentLocation currLoc;
-
+    
     protected:
         VariableDescriptor (int size, VarType type, CurrentLocation location, int memLoc = -1) : 
             currLoc (location.getLocationType (), location.getValue ())
@@ -150,7 +159,12 @@ class VariableDescriptor
         {
             return size;
         }
-    
+        
+        CurrentLocation getCurrLocation ()
+        {
+            return currLoc;
+        }
+
         void setCurrLocation (LocationType type, int value)
         {
             currLoc.set (type, value);
@@ -160,6 +174,18 @@ class VariableDescriptor
         {
             memLocation = memLoc;
         }
+    
+        int getMemLoc ()
+        {
+            return memLocation;
+        }
+    
+        VarType getType ()
+        {
+            return type;
+        }
+    
+        virtual ~VariableDescriptor (){}
 };
 
 class LocalDescriptor : public VariableDescriptor
@@ -173,6 +199,13 @@ class LocalDescriptor : public VariableDescriptor
         {
             localVar = local;
         }
+        
+        Local* getLocalVariable ()
+        {
+            return localVar;
+        }
+    
+        virtual ~LocalDescriptor (){}
 };
 
 class TempDescriptor : public VariableDescriptor
@@ -182,6 +215,8 @@ class TempDescriptor : public VariableDescriptor
             VariableDescriptor (size, type, currLoc, memLoc)
         {
         }
+        
+        virtual ~TempDescriptor (){}
 };
 
 class JIT
@@ -189,14 +224,18 @@ class JIT
     private:
         MethodCode* currentCode;
         JITStack* jitStack;
+        stack<VariableDescriptor*> varStack;
         vector <RegisterDescriptor*> vectorIntRegisters;
         vector <RegisterDescriptor*> vectorFloatRegisters;
         vector <LocalDescriptor*> vectorLocalDescriptors;
+        vector <TempDescriptor*> vectorTempDescriptors;
 
         void allocateMemory (VariableDescriptor *varDesc);
-        void allocateRegister (VariableDescriptor *varDesc);
+        bool allocateRegister (VariableDescriptor *varDesc);
+        void _allocateRegister (VariableDescriptor *varDesc, RegisterDescriptor* regDesc);
         void copyToMemory (VariableDescriptor *varDesc);
-
+        TempDescriptor* createTempDescriptor (int size, OperatorType type, string value);
+        
     public:
         JIT ();
         int runMethodCode (MethodCode* code);

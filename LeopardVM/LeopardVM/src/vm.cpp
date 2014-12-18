@@ -184,6 +184,7 @@ int VirtualMachine::read (const string filename)
                 string op = read_string_from_byte_array (memblock + memblockIter, op_size);
                 memblockIter += op_size;
                 
+                //printf ("K %d %d %d %s\n", k, byteCode, op_size, op.c_str ());
                 vectorInstructions.insert (vectorInstructions.end (),
                                            (new Instruction (byteCode, op_size, op)));
                 k++;

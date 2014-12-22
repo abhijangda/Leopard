@@ -4,6 +4,7 @@ extern "C"
 }
 
 #include <stack>
+#include <map>
 
 #include "classinfo.h"
 
@@ -219,23 +220,48 @@ class TempDescriptor : public VariableDescriptor
         virtual ~TempDescriptor (){}
 };
 
+class JITLabel
+{
+    private:
+        jit_node_t* node;
+        string labelStr;
+    
+    public:
+        JITLabel (jit_node_t* node, string labelStr)
+        {
+            this->node = node;
+            this->labelStr = labelStr;
+        }
+        
+        jit_node_t *getJITNode ()
+        {
+            return node;
+        }
+        
+};
+
 class JIT
 {
     private:
         MethodCode* currentCode;
         JITStack* jitStack;
-        stack<VariableDescriptor*> varStack;
+        stack<VariableDescriptor*>* varStack;
+        stack<VariableDescriptor*>* rootVarStack;
+        stack<stack<VariableDescriptor*>* > varStackStack;
         vector <RegisterDescriptor*> vectorIntRegisters;
         vector <RegisterDescriptor*> vectorFloatRegisters;
         vector <LocalDescriptor*> vectorLocalDescriptors;
         vector <TempDescriptor*> vectorTempDescriptors;
+        map <string, JITLabel*> mapLabels;
 
         void allocateMemory (VariableDescriptor *varDesc);
         bool allocateRegister (VariableDescriptor *varDesc);
         void _allocateRegister (VariableDescriptor *varDesc, RegisterDescriptor* regDesc);
         void copyToMemory (VariableDescriptor *varDesc);
         TempDescriptor* createTempDescriptor (int size, OperatorType type, string value);
-        
+        void processPushInstr (int size, OperatorType type, Instruction* instr);
+        void processArithInstr (jit_code_t code_i, jit_code_t code_f, jit_code_t code_d);
+
     public:
         JIT ();
         int runMethodCode (MethodCode* code);

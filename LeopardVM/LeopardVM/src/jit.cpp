@@ -2,10 +2,13 @@
 #include <stdio.h>
 #include <string>
 #include <cstdlib>
+#include <stdexcept>
 
 #define INT_DEFAULT_VALUE 0
 #define FLOAT_DEFAULT_VALUE 0.0
-#define FLOAT_DEBUG
+#undef FLOAT_DEBUG
+#define ARITH_START_CODE 27
+#define ARITH_END_CODE 47
 
 static jit_state* _jit;
 
@@ -16,8 +19,8 @@ static OperatorType getOperatorTypeFromString (string type)
         return SignedChar;
     }
     else if (type == "unsigned char")
-    {
-        return UnsignedChar;
+    {                         
+        return UnsignedChar;  
     }
     else if (type == "short")
     {
@@ -134,6 +137,10 @@ JIT::JIT ()
     vectorFloatRegisters.insert (vectorFloatRegisters.end (), new RegisterDescriptor (JIT_F3));
     vectorFloatRegisters.insert (vectorFloatRegisters.end (), new RegisterDescriptor (JIT_F4));
     vectorFloatRegisters.insert (vectorFloatRegisters.end (), new RegisterDescriptor (JIT_F5));
+    
+    varStackStack.push (new stack<VariableDescriptor*> ());
+    varStack = varStackStack.top ();
+    rootVarStack = varStack;
 }
 
 /* This function allocates memory on stack to variable 
@@ -159,7 +166,7 @@ void JIT::allocateMemory (VariableDescriptor *varDesc)
             jit_movi (JIT_R0, INT_DEFAULT_VALUE);
             jitStack->stackPush (_jit, JIT_R0, type);
 #ifdef FLOAT_DEBUG            
-            //jit_movi (JIT_R0, 11);
+            jit_movi (JIT_R0, 11);
 #endif
         }
         else
@@ -280,6 +287,84 @@ TempDescriptor *JIT::createTempDescriptor (int size, OperatorType type, string v
     return tempDesc;
 }
 
+inline void JIT::processPushInstr (int size, OperatorType type, Instruction* instr)
+{
+    TempDescriptor* tempDesc;
+    tempDesc = createTempDescriptor (size, type, instr->getOp ());
+
+    if (isIntegerType (type))
+    {
+        jit_movi (tempDesc->getCurrLocation ().getValue (), 
+                  atoi (instr->getOp ().c_str ()));
+    }
+    else if (type == Float)
+    {
+        jit_movi_f (tempDesc->getCurrLocation ().getValue (), 
+                    atof (instr->getOp ().c_str ()));
+    }
+    else
+    {
+        jit_movi_d (tempDesc->getCurrLocation ().getValue (), 
+                    strtod (instr->getOp ().c_str (), NULL));
+    }
+
+    varStack->push (tempDesc);
+}
+
+void JIT::processArithInstr (jit_code_t code_i, jit_code_t code_f, jit_code_t code_d)
+{
+    /* Initialization code for Arithmetic Insructions */
+    VariableDescriptor* tempDesc1 = varStack->top ();
+    varStack->pop ();
+    VariableDescriptor* tempDesc2 = varStack->top ();
+    varStack->pop ();
+            
+    if (allocateRegister (tempDesc1) &&
+        dynamic_cast <VariableDescriptor*> (tempDesc1) != null)
+    {
+        jitStack->copyMemToReg (_jit, tempDesc1->getMemLoc (), 
+                                tempDesc1->getCurrLocation ().getValue (),
+                                getOperatorTypeFromString (tempDesc1->getType ()));
+    }
+
+    if (allocateRegister (tempDesc2) &&
+        dynamic_cast <VariableDescriptor*> (tempDesc2) != null)
+    {
+        jitStack->copyMemToReg (_jit, tempDesc2->getMemLoc (), 
+                                tempDesc2->getCurrLocation ().getValue (),
+                                getOperatorTypeFromString (tempDesc2->getType ()));
+    }
+
+    TempDescriptor *tempDesc3;
+
+    tempDesc3 = createTempDescriptor (tempDesc1->getSize (),
+                                      getOperatorTypeFromString (tempDesc1->getType ()), "");
+    
+    if (isIntegerType (getOperatorTypeFromString (tempDesc1->getType ())))
+    {
+        jit_new_node_www (code_i, tempDesc3->getCurrLocation ().getValue (), 
+                  tempDesc1->getCurrLocation ().getValue (), 
+                  tempDesc2->getCurrLocation ().getValue ());
+    }
+    else
+    {
+        if (getOperatorTypeFromString (tempDesc1->getType ()) == Float)
+        {
+            jit_new_node_www (code_f, tempDesc3->getCurrLocation ().getValue (), 
+                        tempDesc1->getCurrLocation ().getValue (), 
+                        tempDesc2->getCurrLocation ().getValue ());
+        }
+        else if (getOperatorTypeFromString (tempDesc1->getType ()) == Double)
+        {
+            jit_new_node_www (code_d, tempDesc3->getCurrLocation ().getValue (), 
+                              tempDesc1->getCurrLocation ().getValue (), 
+                              tempDesc2->getCurrLocation ().getValue ());
+        }
+    }
+    
+    varStack->push (tempDesc3);
+}
+                                
 void JIT::convertCode (MethodCode *code)
 {
     int size = 0;
@@ -305,78 +390,79 @@ void JIT::convertCode (MethodCode *code)
     }
 
     TempDescriptor *tempDesc;
+    static void *labelArray[] = { null, null, &&L3, &&L4, &&L5, &&L6, &&L7, &&L8, &&L9, &&L10, 
+                                &&L11, &&L12, &&L13, &&L14, &&L15, &&L16, &&L17,
+                                &&L18, &&L19, &&L20, &&L21, &&L22, &&L23, &&L24, 
+                                &&L25, &&L26, &&L27, &&L28, &&L29, &&L30
+                                };
 
     for (int i = 0; i < code->getTotalInstructions (); i++)
     {
-        if (code->getInstruction (i)->getByteCode () == 3)
+        int instrByteCode = code->getInstruction (i)->getByteCode ();
+        printf ("BB%d\n", instrByteCode);
+        if (instrByteCode == 100)
+        goto L100;    
+        if (instrByteCode == 63)
+        continue;
+        goto *labelArray [instrByteCode - 1];
+
+        L3:
         {
             /* push.b */
-            tempDesc = createTempDescriptor (sizeof (char), UnsignedChar, 
-                                             code->getInstruction (i)->getOp ());
-            jit_movi (tempDesc->getCurrLocation ().getValue (), 
-                      atoi (code->getInstruction (i)->getOp ().c_str ()));
-            varStack.push (tempDesc);
+            processPushInstr (sizeof (char), UnsignedChar, 
+                              code->getInstruction (i));
+            continue;
         }
-        else if (code->getInstruction (i)->getByteCode () == 4)
+
+        L4:
         {
             /* push.s */
-            tempDesc = createTempDescriptor (sizeof (short), Short, 
-                                             code->getInstruction (i)->getOp ());
-            jit_movi (tempDesc->getCurrLocation ().getValue (), 
-                      atoi (code->getInstruction (i)->getOp ().c_str ()));
-            varStack.push (tempDesc);
+            processPushInstr (sizeof (short), Short, 
+                              code->getInstruction (i));
+            continue;
         }
-        else if (code->getInstruction (i)->getByteCode () == 5)
+        L5:
         {
             /* push.i */
-            tempDesc = createTempDescriptor (sizeof (int), Integer, 
-                                             code->getInstruction (i)->getOp ());
-            jit_movi (tempDesc->getCurrLocation ().getValue (), 
-                      atoi (code->getInstruction (i)->getOp ().c_str ()));
-            varStack.push (tempDesc);
-            //printf ("TO REG %d value %s\n",tempDesc->getCurrLocation ().getValue (), code->getInstruction (i)->getOp ().c_str ());
+            processPushInstr (sizeof (int), Integer, 
+                              code->getInstruction (i));
+            printf ("TO REG %d value %s\n",varStack->top()->getCurrLocation ().getValue (), code->getInstruction (i)->getOp ().c_str ());
+            continue;
         }
-        else if (code->getInstruction (i)->getByteCode () == 6)
+        L6:
         {
             /* push.l */
-            tempDesc = createTempDescriptor (sizeof (long), Long, 
-                                             code->getInstruction (i)->getOp ());
-            jit_movi (tempDesc->getCurrLocation ().getValue (), 
-                      atoi (code->getInstruction (i)->getOp ().c_str ()));
-            varStack.push (tempDesc);
+            processPushInstr (sizeof (long), Long,
+                              code->getInstruction (i));
+            continue;
         }
-        else if (code->getInstruction (i)->getByteCode () == 7)
+        L7:
         {
             /* push.f */
-            tempDesc = createTempDescriptor (sizeof (float), Float, 
-                                             code->getInstruction (i)->getOp ());
-            jit_movi (tempDesc->getCurrLocation ().getValue (), 
-                      atoi (code->getInstruction (i)->getOp ().c_str ()));
-            varStack.push (tempDesc);
+            processPushInstr (sizeof (float), Float,
+                              code->getInstruction (i));
+            continue;
         }
-        else if (code->getInstruction (i)->getByteCode () == 8)
+        L8:
         {
             /* push.d */
-            tempDesc = createTempDescriptor (sizeof (double), Double, 
-                                             code->getInstruction (i)->getOp ());
-            jit_movi_d (tempDesc->getCurrLocation ().getValue (), 
-                        strtod (code->getInstruction (i)->getOp ().c_str (), NULL));
-            varStack.push (tempDesc);
+            processPushInstr (sizeof (double), Double,
+                              code->getInstruction (i));
+            
+            continue;
         }
-        else if (code->getInstruction (i)->getByteCode () == 9)
+        L9:
         {
             /* push.c */
-            tempDesc = createTempDescriptor (sizeof (char), SignedChar, 
-                                             code->getInstruction (i)->getOp ());
-            jit_movi (tempDesc->getCurrLocation ().getValue (), 
-                      atoi (code->getInstruction (i)->getOp ().c_str ()));
-            varStack.push (tempDesc);
+            processPushInstr (sizeof (char), SignedChar,
+                              code->getInstruction (i));
+            continue;
         }
-        else if (code->getInstruction (i)->getByteCode () == 10)
+        L10:
         {
             /* dup */
-            VariableDescriptor* tempDesc1 = varStack.top ();
-            varStack.pop ();
+            VariableDescriptor* tempDesc1 = varStack->top ();
+            varStack->pop ();
             tempDesc = createTempDescriptor (tempDesc1->getSize (), 
                                              getOperatorTypeFromString (tempDesc1->getType ()), 
                                              "");
@@ -405,20 +491,21 @@ void JIT::convertCode (MethodCode *code)
                 }
             }
 
-            varStack.push (tempDesc);
+            varStack->push (tempDesc);
+            continue;
         }
         /* Next are convert instructions, 
          * convert instructions create a new temporary variable */
-        else if (code->getInstruction (i)->getByteCode () == 11)
+        L11:
         {
             /* conv.b */
-            VariableDescriptor* tempDesc1 = varStack.top ();
+            VariableDescriptor* tempDesc1 = varStack->top ();
 
             /* Temporary on the top of the stack 
              * would be in a register for sure */
             allocateRegister (tempDesc1);
             /* So above call doesn't require a check for Temporary */
-            varStack.pop ();
+            varStack->pop ();
             tempDesc = createTempDescriptor (sizeof (unsigned char), UnsignedChar, 
                                              "");
             if (isIntegerType (getOperatorTypeFromString (tempDesc1->getType ())))
@@ -439,18 +526,19 @@ void JIT::convertCode (MethodCode *code)
 
             jit_andi (tempDesc->getCurrLocation ().getValue (), 
                       tempDesc->getCurrLocation ().getValue (), 0xFF);
-            varStack.push (tempDesc);
+            varStack->push (tempDesc);
+            continue;
         }
-        else if (code->getInstruction (i)->getByteCode () == 12)
+        L12:
         {
             /* conv.s */
-            VariableDescriptor* tempDesc1 = varStack.top ();
+            VariableDescriptor* tempDesc1 = varStack->top ();
 
             /* Temporary on the top of the stack 
              * would be in a register for sure */
             allocateRegister (tempDesc1);
             /* So above call doesn't require a check for Temporary */
-            varStack.pop ();
+            varStack->pop ();
             tempDesc = createTempDescriptor (sizeof (short), Short, 
                                              "");
             if (isIntegerType (getOperatorTypeFromString (tempDesc1->getType ())))
@@ -470,19 +558,20 @@ void JIT::convertCode (MethodCode *code)
             }
 
             jit_andi (tempDesc->getCurrLocation ().getValue (), 
-                      tempDesc->getCurrLocation ().getValue (), 0xFF);
-            varStack.push (tempDesc);
+                      tempDesc->getCurrLocation ().getValue (), 0xFFFF);
+            varStack->push (tempDesc);
+            continue;
         }
-        else if (code->getInstruction (i)->getByteCode () == 13)
+        L13:
         {
             /* conv.i */
-            VariableDescriptor* tempDesc1 = varStack.top ();
+            VariableDescriptor* tempDesc1 = varStack->top ();
 
             /* Temporary on the top of the stack 
              * would be in a register for sure */
             allocateRegister (tempDesc1);
             /* So above call doesn't require a check for Temporary */
-            varStack.pop ();
+            varStack->pop ();
             tempDesc = createTempDescriptor (sizeof (int), Integer, 
                                              "");
             if (isIntegerType (getOperatorTypeFromString (tempDesc1->getType ())))
@@ -507,18 +596,19 @@ void JIT::convertCode (MethodCode *code)
                                tempDesc1->getCurrLocation ().getValue ());                
             }
 
-            varStack.push (tempDesc);
+            varStack->push (tempDesc);
+            continue;
         }
-        else if (code->getInstruction (i)->getByteCode () == 14)
+        L14:
         {
             /* conv.l */
-            VariableDescriptor* tempDesc1 = varStack.top ();
+            VariableDescriptor* tempDesc1 = varStack->top ();
 
             /* Temporary on the top of the stack 
              * would be in a register for sure */
             allocateRegister (tempDesc1);
             /* So above call doesn't require a check for Temporary */
-            varStack.pop ();
+            varStack->pop ();
             tempDesc = createTempDescriptor (sizeof (long), Long, 
                                              "");
             if (isIntegerType (getOperatorTypeFromString (tempDesc1->getType ())))
@@ -537,18 +627,19 @@ void JIT::convertCode (MethodCode *code)
                                tempDesc1->getCurrLocation ().getValue ());                
             }
 
-            varStack.push (tempDesc);
+            varStack->push (tempDesc);
+            continue;
         }
-        else if (code->getInstruction (i)->getByteCode () == 15)
+        L15:
         {
             /* conv.f */
-            VariableDescriptor* tempDesc1 = varStack.top ();
+            VariableDescriptor* tempDesc1 = varStack->top ();
 
             /* Temporary on the top of the stack 
              * would be in a register for sure */
             allocateRegister (tempDesc1);
             /* So above call doesn't require a check for Temporary */
-            varStack.pop ();
+            varStack->pop ();
             tempDesc = createTempDescriptor (sizeof (float), Float, 
                                              "");
             if (isIntegerType (getOperatorTypeFromString (tempDesc1->getType ())))
@@ -562,23 +653,24 @@ void JIT::convertCode (MethodCode *code)
                               tempDesc1->getCurrLocation ().getValue ());
             }
             
-            varStack.push (tempDesc);
+            varStack->push (tempDesc);
+            continue;
         }
-        else if (code->getInstruction (i)->getByteCode () == 16)
+        L16:
         {
             /* conv.d */
-            VariableDescriptor* tempDesc1 = varStack.top ();
+            VariableDescriptor* tempDesc1 = varStack->top ();
 
             /* Temporary on the top of the stack 
              * would be in a register for sure */
             allocateRegister (tempDesc1);
             /* So above call doesn't require a check for Temporary */
-            varStack.pop ();
+            varStack->pop ();
             tempDesc = createTempDescriptor (sizeof (float), Float, 
                                              "");
             if (isIntegerType (getOperatorTypeFromString (tempDesc1->getType ())))
             {
-                jit_extr_f (tempDesc->getCurrLocation ().getValue (),
+                jit_extr_d (tempDesc->getCurrLocation ().getValue (),
                             tempDesc1->getCurrLocation ().getValue ());
             }
             else if (getOperatorTypeFromString (tempDesc1->getType ()) == Double)
@@ -587,18 +679,19 @@ void JIT::convertCode (MethodCode *code)
                               tempDesc1->getCurrLocation ().getValue ());
             }
             
-            varStack.push (tempDesc);
+            varStack->push (tempDesc);
+            continue;
         }
-        else if (code->getInstruction (i)->getByteCode () == 17)
+        L17:
         {
             /* conv.c */
-            VariableDescriptor* tempDesc1 = varStack.top ();
+            VariableDescriptor* tempDesc1 = varStack->top ();
 
             /* Temporary on the top of the stack 
              * would be in a register for sure */
             allocateRegister (tempDesc1);
             /* So above call doesn't require a check for Temporary */
-            varStack.pop ();
+            varStack->pop ();
             tempDesc = createTempDescriptor (sizeof (char), SignedChar, 
                                              "");
             if (isIntegerType (getOperatorTypeFromString (tempDesc1->getType ())))
@@ -619,230 +712,254 @@ void JIT::convertCode (MethodCode *code)
 
             jit_andi (tempDesc->getCurrLocation ().getValue (), 
                       tempDesc->getCurrLocation ().getValue (), 0xFF);
-            varStack.push (tempDesc);
+            varStack->push (tempDesc);
+            continue;
+        }
+    
+        L18:
+        {
+            continue;
+        }
+    
+        L19:
+        {
+            continue;
         }
         /* Branch Instructions */
+        L20:
+        {
+            JITLabel *label = null;
+            
+            try
+            {
+                label = mapLabels.at (code->getInstruction (i)->getOp ());
+                /* Label is found hence the label is already defined.
+                 * so it is used for a backward jump */
+                jit_node_t *jump = jit_jmpi ();
+                jit_patch_at (label->getJITNode (), jump);
+                printf ("FOUND %s\n", code->getInstruction (i)->getOp ().c_str ());
+            }
+            catch (const std::out_of_range& a)
+            {
+                /* Label not found hence the label is not defined
+                 * so it is used for a forward jump */
+                label = new JITLabel (jit_label (), code->getInstruction (i)->getOp ());
+                mapLabels [code->getInstruction (i)->getOp ()] = label;
+                varStack = new stack<VariableDescriptor*> (*varStack);
+                varStackStack.push (varStack);
+                printf ("NOT FOUND %s\n", code->getInstruction (i)->getOp ().c_str ());
+            }
+        
+            continue;
+        }
+        L21:
+        {
+            /* brzero <label> */
+            continue;
+        }
+        L22:
+        {
+            /* beq <label> */
+            continue;
+        }
+        L23:
+        {
+            /* bge <label> */
+            continue;
+        }
+        L24:
+        {
+            /* bgt <label> */
+            continue;
+        }
+        L25:
+        {
+            /* ble <label> */
+            continue;
+        }
+        L26:
+        {
+            /* blt <label> */
+            
+            continue;
+        }
         /* Arithmetic Instructions */
-        else if (code->getInstruction (i)->getByteCode () == 27)
+        L27:
         {
             /* add */
-            VariableDescriptor* tempDesc1 = varStack.top ();
-            varStack.pop ();
-            VariableDescriptor* tempDesc2 = varStack.top ();
-            varStack.pop ();
-            
-            if (allocateRegister (tempDesc1) &&
-                dynamic_cast <VariableDescriptor*> (tempDesc1) != null)
-            {
-                jitStack->copyMemToReg (_jit, tempDesc1->getMemLoc (), 
-                                        tempDesc1->getCurrLocation ().getValue (),
-                                        getOperatorTypeFromString (tempDesc1->getType ()));
-            }
-
-            if (allocateRegister (tempDesc2) &&
-                dynamic_cast <VariableDescriptor*> (tempDesc2) != null)
-            {
-                jitStack->copyMemToReg (_jit, tempDesc2->getMemLoc (), 
-                                        tempDesc2->getCurrLocation ().getValue (),
-                                        getOperatorTypeFromString (tempDesc2->getType ()));
-            }
-
-            TempDescriptor *tempDesc3;
-
-            tempDesc3 = createTempDescriptor (tempDesc1->getSize (),
-                                              getOperatorTypeFromString (tempDesc1->getType ()), "");
-            
-            // Register is always allocated to a newly created temporary
-            if (isIntegerType (getOperatorTypeFromString (tempDesc1->getType ())))
-            {
-                jit_addr (tempDesc3->getCurrLocation ().getValue (), 
-                          tempDesc1->getCurrLocation ().getValue (), 
-                          tempDesc2->getCurrLocation ().getValue ());
-            }
-            else
-            {
-                if (getOperatorTypeFromString (tempDesc1->getType ()) == Float)
-                {
-                    jit_addr_f (tempDesc3->getCurrLocation ().getValue (), 
-                                tempDesc1->getCurrLocation ().getValue (), 
-                                tempDesc2->getCurrLocation ().getValue ());
-                }
-                else if (getOperatorTypeFromString (tempDesc1->getType ()) == Double)
-                {
-                    jit_addr_d (tempDesc3->getCurrLocation ().getValue (), 
-                                tempDesc1->getCurrLocation ().getValue (), 
-                                tempDesc2->getCurrLocation ().getValue ());
-                }
-            }
-
-            varStack.push (tempDesc3);
+            processArithInstr (jit_code_addr, jit_code_addr_f, jit_code_addr_d);
+            continue;
         }
-        else if (code->getInstruction (i)->getByteCode () == 28)
+
+        L28:
         {
             // sub
-            VariableDescriptor* tempDesc1 = varStack.top ();
-            varStack.pop ();
-            VariableDescriptor* tempDesc2 = varStack.top ();
-            varStack.pop ();
-            
-            if (allocateRegister (tempDesc1) &&
-                dynamic_cast <VariableDescriptor*> (tempDesc1) != null)
-            {
-                jitStack->copyMemToReg (_jit, tempDesc1->getMemLoc (), 
-                                        tempDesc1->getCurrLocation ().getValue (),
-                                        getOperatorTypeFromString (tempDesc1->getType ()));
-            }
-
-            if (allocateRegister (tempDesc2) &&
-                dynamic_cast <VariableDescriptor*> (tempDesc2) != null)
-            {
-                jitStack->copyMemToReg (_jit, tempDesc2->getMemLoc (), 
-                                        tempDesc2->getCurrLocation ().getValue (),
-                                        getOperatorTypeFromString (tempDesc2->getType ()));
-            }
-
-            TempDescriptor *tempDesc3;
-
-            tempDesc3 = createTempDescriptor (tempDesc1->getSize (),
-                                              getOperatorTypeFromString (tempDesc1->getType ()), "");
-            
-            // Register is always allocated to a newly created temporary
-            if (isIntegerType (getOperatorTypeFromString (tempDesc1->getType ())))
-            {
-                jit_subr (tempDesc3->getCurrLocation ().getValue (), 
-                          tempDesc2->getCurrLocation ().getValue (), 
-                          tempDesc1->getCurrLocation ().getValue ());
-            }
-            else
-            {
-                if (getOperatorTypeFromString (tempDesc1->getType ()) == Float)
-                {
-                    jit_subr_f (tempDesc3->getCurrLocation ().getValue (), 
-                                tempDesc2->getCurrLocation ().getValue (), 
-                                tempDesc1->getCurrLocation ().getValue ());
-                }
-                else if (getOperatorTypeFromString (tempDesc1->getType ()) == Double)
-                {
-                    jit_subr_d (tempDesc3->getCurrLocation ().getValue (), 
-                                tempDesc2->getCurrLocation ().getValue (), 
-                                tempDesc1->getCurrLocation ().getValue ());
-                }
-            }
-
-            varStack.push (tempDesc3);
+            processArithInstr (jit_code_subr, jit_code_subr_f, jit_code_subr_d);
+            continue;
         }
-        else if (code->getInstruction (i)->getByteCode () == 29)
+    
+        L29:
         {
             // mul
-            VariableDescriptor* tempDesc1 = varStack.top ();
-            varStack.pop ();
-            VariableDescriptor* tempDesc2 = varStack.top ();
-            varStack.pop ();
-            
-            if (allocateRegister (tempDesc1) &&
-                dynamic_cast <VariableDescriptor*> (tempDesc1) != null)
-            {
-                jitStack->copyMemToReg (_jit, tempDesc1->getMemLoc (),
-                                        tempDesc1->getCurrLocation ().getValue (),
-                                        getOperatorTypeFromString (tempDesc1->getType ()));
-            }
-
-            if (allocateRegister (tempDesc2) &&
-                dynamic_cast <VariableDescriptor*> (tempDesc2) != null)
-            {
-                jitStack->copyMemToReg (_jit, tempDesc2->getMemLoc (),
-                                        tempDesc2->getCurrLocation ().getValue (),
-                                        getOperatorTypeFromString (tempDesc2->getType ()));
-            }
-
-            TempDescriptor *tempDesc3;
-
-            tempDesc3 = createTempDescriptor (tempDesc1->getSize (),
-                                              getOperatorTypeFromString (tempDesc1->getType ()), "");
-            
-            // Register is always allocated to a newly created temporary
-            if (isIntegerType (getOperatorTypeFromString (tempDesc1->getType ())))
-            {
-                jit_mulr (tempDesc3->getCurrLocation ().getValue (), 
-                          tempDesc1->getCurrLocation ().getValue (), 
-                          tempDesc2->getCurrLocation ().getValue ());
-            }
-            else
-            {
-                if (getOperatorTypeFromString (tempDesc1->getType ()) == Float)
-                {
-                    jit_mulr_f (tempDesc3->getCurrLocation ().getValue (), 
-                                tempDesc1->getCurrLocation ().getValue (), 
-                                tempDesc2->getCurrLocation ().getValue ());
-                }
-                else if (getOperatorTypeFromString (tempDesc1->getType ()) == Double)
-                {
-                    jit_mulr_d (tempDesc3->getCurrLocation ().getValue (), 
-                                tempDesc1->getCurrLocation ().getValue (), 
-                                tempDesc2->getCurrLocation ().getValue ());
-                }
-            }
-            varStack.push (tempDesc3);
+            processArithInstr (jit_code_mulr, jit_code_mulr_f, jit_code_mulr_d);
+            continue;
         }
-        else if (code->getInstruction (i)->getByteCode () == 30)
+    
+        L30:
         {
             //div
-            VariableDescriptor* tempDesc1 = varStack.top ();
-            varStack.pop ();
-            VariableDescriptor* tempDesc2 = varStack.top ();
-            varStack.pop ();
-
-            if (allocateRegister (tempDesc1) &&
-                dynamic_cast <VariableDescriptor*> (tempDesc1) != null)
-            {
-                jitStack->copyMemToReg (_jit, tempDesc1->getMemLoc (), 
-                                        tempDesc1->getCurrLocation ().getValue (),
-                                        getOperatorTypeFromString (tempDesc1->getType ()));
-            }
-
-            if (allocateRegister (tempDesc2) &&
-                dynamic_cast <VariableDescriptor*> (tempDesc1) != null)
-            {
-                jitStack->copyMemToReg (_jit, tempDesc2->getMemLoc (), 
-                                        tempDesc2->getCurrLocation ().getValue (),
-                                        getOperatorTypeFromString (tempDesc2->getType ()));
-            }
-
-            TempDescriptor *tempDesc3;
-
-            tempDesc3 = createTempDescriptor (tempDesc1->getSize (),
-                                              getOperatorTypeFromString (tempDesc1->getType ()), "");
-            //Register is always allocated to a newly created temporary
-            if (isIntegerType (getOperatorTypeFromString (tempDesc1->getType ())))
-            {
-                jit_divr (tempDesc3->getCurrLocation ().getValue (), 
-                          tempDesc1->getCurrLocation ().getValue (), 
-                          tempDesc2->getCurrLocation ().getValue ());
-            }
-            else
-            {
-                if (getOperatorTypeFromString (tempDesc1->getType ()) == Float)
-                {
-                    jit_divr_f (tempDesc3->getCurrLocation ().getValue (), 
-                                tempDesc1->getCurrLocation ().getValue (), 
-                                tempDesc2->getCurrLocation ().getValue ());
-                }
-                else if (getOperatorTypeFromString (tempDesc1->getType ()) == Double)
-                {
-                    jit_divr_d (tempDesc3->getCurrLocation ().getValue (), 
-                                tempDesc1->getCurrLocation ().getValue (), 
-                                tempDesc2->getCurrLocation ().getValue ());
-                }
-            }
-
-            varStack.push (tempDesc);
+            processArithInstr (jit_code_divr, jit_code_divr_f, jit_code_divr_d);
+            continue;
         }
-        else if (code->getInstruction (i)->getByteCode () == 31)
+
+        L31:
         {
+            continue;
         }
-        else if (code->getInstruction (i)->getByteCode () == 100)
+    
+        L32:
+        {
+            processArithInstr (jit_code_remr_u, jit_code_remr_u, jit_code_remr_u);
+            continue;
+        }
+        
+        L33:
+        {
+            continue;
+        }
+        
+        L34:
+        {
+            // and
+            processArithInstr (jit_code_andr, jit_code_andr, jit_code_andr);
+            continue;
+        }
+        
+        L35:
+        {
+            // or
+            processArithInstr (jit_code_orr, jit_code_orr, jit_code_orr);
+            continue;
+        }
+    
+        L36:
+        {
+            // xor
+            processArithInstr (jit_code_xorr, jit_code_xorr, jit_code_xorr);
+            continue;
+        }
+    
+        L37:
+        {
+            // shl
+            processArithInstr (jit_code_lshr, jit_code_lshr, jit_code_lshr);
+            continue;
+        }
+    
+        L38:
+        {
+            // shr
+            processArithInstr (jit_code_rshr, jit_code_rshr, jit_code_rshr);
+            continue;
+        }
+    
+        L39:
+        {
+            //processArithInstr (jit_code_xorr, jit_code_xorr, jit_code_xorr);
+            continue;
+        }
+    
+        L40:
+        {
+            // neg
+            processArithInstr (jit_code_negr, jit_code_negr, jit_code_negr);
+            continue;
+        }
+    
+        L41:
+        {
+            // not
+            processArithInstr (jit_code_comr, jit_code_comr, jit_code_comr);
+            continue;
+        }
+
+        L42:
+        {
+            // le
+            processArithInstr (jit_code_ler_u, jit_code_ler_f, jit_code_ler_d);
+            continue;
+        }
+    
+        L43:
+        {
+            // ge
+            processArithInstr (jit_code_ger_u, jit_code_ger_f, jit_code_ger_d);
+            continue;
+        }
+    
+        L44:
+        {
+            // lt
+            processArithInstr (jit_code_ltr, jit_code_ltr_f, jit_code_ltr_d);
+            continue;
+        }
+    
+        L45:
+        {
+            // gt
+            processArithInstr (jit_code_gtr, jit_code_gtr_f, jit_code_gtr_d);
+            continue;
+        }
+    
+        L46:
+        {
+            // eq
+            processArithInstr (jit_code_eqr, jit_code_eqr_f, jit_code_eqr_d);
+            continue;
+        }
+    
+        L47:
+        {
+            // ne
+            processArithInstr (jit_code_ner, jit_code_ner_f, jit_code_ner_d);
+            continue;
+        }
+    
+        L48:
+        {
+            // push.str
+             continue;
+        }
+             
+        L100:
         {
             //Create a new Label
+            /* Backward jump is a jump when first Label is defined and then 
+             * jump instruction is used to jump to it
+             * In forward, instruction uses that jump before the jump 
+             * is defined
+             * Search if a label is already in the mapLabels
+             * This can happen if there has to be forward jump. In this case
+             * Label is created by branch instructions */
+            JITLabel *label = null;
+            
+            try
+            {
+                label = mapLabels.at (code->getInstruction (i)->getOp ());
+                /* Label is found hence the label is used for a forward jump */
+                jit_patch (label->getJITNode ());
+                varStackStack.pop ();
+                varStack = new stack<VariableDescriptor*> (*varStackStack.top ());
+                varStackStack.push (varStack);
+            }
+            catch (const std::out_of_range& a)
+            {
+                /* Label not found hence the label is used for a backward jump */
+                label = new JITLabel (jit_label (), code->getInstruction (i)->getOp ());
+                mapLabels [code->getInstruction (i)->getOp ()] = label;
+            }
+        
+            continue;
         }
     }
 }
@@ -860,13 +977,19 @@ int JIT::runMethodCode (MethodCode *code)
 
     jit_prolog();
     convertCode (code);
-    jit_pushargi((jit_word_t)" %f ll\n");
+    /*jit_node_t *jump;
+    jit_movi (JIT_R0, 10);
+    jump = jit_jmpi ();
+    jit_movi (JIT_R0, 3);
+    jit_patch (jump);*/
+    jit_pushargi((jit_word_t)" %d ll\n");
     jit_ellipsis();
     //printf ("TOP %d \n", vectorTempDescriptors [vectorTempDescriptors.size () - 1]->getCurrLocation ().getValue ());
     //jit_pushargr_d(vectorTempDescriptors [vectorTempDescriptors.size () - 1]->getCurrLocation ().getValue ());
-    jit_pushargr_d(varStack.top ()->getCurrLocation ().getValue ());
+    jit_pushargr(varStack->top ()->getCurrLocation ().getValue ());
     //jit_movi_d (JIT_F1, 9.60);
     //jit_pushargr_d (JIT_F0);
+    //jit_pushargr (JIT_R0);
     jit_finishi((jit_pointer_t)printf);
     jit_ret();
     jit_epilog();

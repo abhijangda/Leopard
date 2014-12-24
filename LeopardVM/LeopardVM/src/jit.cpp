@@ -374,10 +374,63 @@ void JIT::processBranchInstr (string _label, jit_code_t code_i, jit_code_t code_
         label = mapLabels.at (_label);
         /* Label is found hence the label is already defined.
          * so it is used for a backward jump */
-        jit_node_t *jump = jit_jmpi ();
-        jit_patch_at (label->getJITNode (), jump);
-        varStack = new stack<VariableDescriptor*> (*varStackStack.top ());
-        varStackStack.push (varStack);
+        jit_node_t *jump;
+
+        if (code_i == -1 && code_f == -1 && code_d == -1)
+        {
+            /* br <label> */
+            jump = jit_jmpi ();
+        }
+        else
+        {
+            /* Other branch instructions */
+            VariableDescriptor* tempDesc1 = varStack->top ();
+            varStack->pop ();
+            VariableDescriptor* tempDesc2 = varStack->top ();
+            varStack->push (tempDesc1);
+
+            if (allocateRegister (tempDesc1) &&
+                dynamic_cast <VariableDescriptor*> (tempDesc1) != null)
+            {
+                jitStack->copyMemToReg (_jit, tempDesc1->getMemLoc (),
+                                        tempDesc1->getCurrLocation ().getValue (),
+                                        getOperatorTypeFromString (tempDesc1->getType ()));
+            }
+
+            if (allocateRegister (tempDesc2) &&
+                dynamic_cast <VariableDescriptor*> (tempDesc2) != null)
+            {
+                jitStack->copyMemToReg (_jit, tempDesc2->getMemLoc (),
+                                        tempDesc2->getCurrLocation ().getValue (),
+                                        getOperatorTypeFromString (tempDesc1->getType ()));
+            }
+        
+            if (isIntegerType (getOperatorTypeFromString (tempDesc1->getType ())))
+            {
+                jump = jit_new_node_pww (code_i, NULL,
+                                               tempDesc1->getCurrLocation ().getValue (),
+                                               tempDesc2->getCurrLocation ().getValue ());
+            }
+            else
+            {
+                if (getOperatorTypeFromString (tempDesc1->getType ()) == Float)
+                {
+                    jump = jit_new_node_pww (code_f, NULL,
+                                                   tempDesc1->getCurrLocation ().getValue (),
+                                                   tempDesc2->getCurrLocation ().getValue ());
+                }
+                else if (getOperatorTypeFromString (tempDesc1->getType ()) == Double)
+                {
+                    jump = jit_new_node_pww (code_d, NULL,
+                                                   tempDesc1->getCurrLocation ().getValue (),
+                                                   tempDesc2->getCurrLocation ().getValue ());
+                }
+            }
+        }
+
+        jit_patch_at (jump, label->getJITNode ());
+        varStackStack.pop ();
+        varStack = varStackStack.top ();
         printf ("FOUND %s\n", _label.c_str ());
     }
     catch (const std::out_of_range& a)
@@ -442,14 +495,7 @@ void JIT::processBranchInstr (string _label, jit_code_t code_i, jit_code_t code_
         varStack = new stack<VariableDescriptor*> (*varStackStack.top ());
         varStackStack.push (varStack);
         printf ("NOT FOUND %s\n", _label.c_str ());
-    }
-
-    if (code_i == -1 && code_f == -1 && code_d == -1)
-    {
-        return;
-    }
-    
-    
+    }    
 }
 
 void JIT::convertCode (MethodCode *code)
@@ -820,45 +866,43 @@ void JIT::convertCode (MethodCode *code)
         /* Branch Instructions */
         L20:
         {
-            
- 
+            processBranchInstr (code->getInstruction (i)->getOp (), (jit_code_t)-1, (jit_code_t)-1, (jit_code_t)-1);
             continue;
         }
         L21:
         {
             /* brzero <label> */
-            
-            goto L20;
+            continue;
         }
         L22:
         {
             /* beq <label> */
-            processBranchInstr (code->getInstruction (i)->getOp (), jit_code_beqr_f, jit_code_beqr_f, jit_code_beqr_f);
-            goto L20;
+            processBranchInstr (code->getInstruction (i)->getOp (), jit_code_beqr, jit_code_beqr_f, jit_code_beqr_d);
+            continue;
         }
         L23:
         {
             /* bge <label> */
-            processBranchInstr (code->getInstruction (i)->getOp (), jit_code_bger_f, jit_code_bger_f, jit_code_bger_f);
-            goto L20;
+            processBranchInstr (code->getInstruction (i)->getOp (), jit_code_bger, jit_code_bger_f, jit_code_bger_d);
+            continue;
         }
         L24:
         {
             /* bgt <label> */
-            processBranchInstr (code->getInstruction (i)->getOp (), jit_code_bgtr_f, jit_code_bgtr_f, jit_code_bgtr_f);
-            goto L20;
+            processBranchInstr (code->getInstruction (i)->getOp (), jit_code_bgtr, jit_code_bgtr_f, jit_code_bgtr_d);
+            continue;
         }
         L25:
         {
             /* ble <label> */
-            processBranchInstr (code->getInstruction (i)->getOp (), jit_code_bler_f, jit_code_bler_f, jit_code_bler_f);
-            goto L20;
+            processBranchInstr (code->getInstruction (i)->getOp (), jit_code_bler, jit_code_bler_f, jit_code_bler_d);
+            continue;
         }
         L26:
         {
             /* blt <label> */
-            processBranchInstr (code->getInstruction (i)->getOp (), jit_code_bltr_f, jit_code_bltr_f, jit_code_bltr_f);
-            goto L20; 
+            processBranchInstr (code->getInstruction (i)->getOp (), jit_code_bltr, jit_code_bltr_f, jit_code_bltr_d);
+            continue; 
         }
         /* Arithmetic Instructions */
         L27:
@@ -1088,14 +1132,31 @@ void JIT::convertCode (MethodCode *code)
  
         L62:
         {
-            // push.str
-             continue;
+            // ldloc
+            int index = atoi (code->getInstruction (i)->getOp ().c_str ());
+            LocalDescriptor* localDesc = vectorLocalDescriptors [index];
+            
+            allocateRegister (localDesc);
+            varStack->push (localDesc);
+            continue;
         }
  
         L63:
         {
-            // push.str
-             continue;
+            // stloc
+            int index = atoi (code->getInstruction (i)->getOp ().c_str ());
+            LocalDescriptor* localDesc = vectorLocalDescriptors [index];
+            VariableDescriptor* varDesc = varStack->top ();
+            varStack->pop ();
+
+            //Topmost value will always be in the register
+            RegisterDescriptor* regDesc = vectorIntRegisters [varDesc->getCurrLocation().getValue ()];
+            regDesc->assignVariable (localDesc);
+            vectorIntRegisters [localDesc->getCurrLocation().getValue ()]->assignVariable (null);
+            localDesc->setCurrLocation (RegisterLocation,
+                                        regDesc->getRegister ());
+
+            continue;
         }
  
         L64:
@@ -1129,16 +1190,14 @@ void JIT::convertCode (MethodCode *code)
                 jit_patch (label->getJITNode ());
                 varStackStack.pop ();
                 varStack = varStackStack.top ();
-                printf ("FOUND LABEL\n");
             }
             catch (const std::out_of_range& a)
             {
                 /* Label not found hence the label is used for a backward jump */
                 label = new JITLabel (jit_label (), code->getInstruction (i)->getOp ());
                 mapLabels [code->getInstruction (i)->getOp ()] = label;
-                varStackStack.pop ();
-                varStack = varStackStack.top ();
-                printf ("NOT FOUND LABEL\n");
+                varStack = new stack<VariableDescriptor*> (*varStackStack.top ());
+                varStackStack.push (varStack);
             }
  
             continue;
@@ -1159,6 +1218,7 @@ int JIT::runMethodCode (MethodCode *code)
 
     jit_prolog();
     convertCode (code);
+    //printf ("RUNNING CODE\n");
     //jit_node_t *jump;
     //jit_movi (JIT_R0, 10);
     //jump = jit_beqi (JIT_R0, 10);
@@ -1171,7 +1231,7 @@ int JIT::runMethodCode (MethodCode *code)
     jit_pushargr(varStack->top ()->getCurrLocation ().getValue ());
     //jit_movi_d (JIT_F1, 9.60);
     //jit_pushargr_d (JIT_F0);
-    jit_pushargr (JIT_R0);
+    //jit_pushargr (JIT_R0);
     jit_finishi((jit_pointer_t)printf);
     jit_ret();
     jit_epilog();
@@ -1180,7 +1240,7 @@ int JIT::runMethodCode (MethodCode *code)
 
     myFunction();
     jit_clear_state();
-    //jit_disassemble();
+    jit_disassemble();
     jit_destroy_state();
     finish_jit();
     return 0;

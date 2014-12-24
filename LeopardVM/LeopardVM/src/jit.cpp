@@ -387,8 +387,8 @@ void JIT::processBranchInstr (string _label, jit_code_t code_i, jit_code_t code_
             VariableDescriptor* tempDesc1 = varStack->top ();
             varStack->pop ();
             VariableDescriptor* tempDesc2 = varStack->top ();
-            varStack->push (tempDesc1);
-
+            //varStack->push (tempDesc1);
+            varStack->pop ();
             if (allocateRegister (tempDesc1) &&
                 dynamic_cast <VariableDescriptor*> (tempDesc1) != null)
             {
@@ -431,7 +431,7 @@ void JIT::processBranchInstr (string _label, jit_code_t code_i, jit_code_t code_
         jit_patch_at (jump, label->getJITNode ());
         varStackStack.pop ();
         varStack = varStackStack.top ();
-        printf ("FOUND %s\n", _label.c_str ());
+        //printf ("FOUND %s\n", _label.c_str ());
     }
     catch (const std::out_of_range& a)
     {
@@ -449,8 +449,8 @@ void JIT::processBranchInstr (string _label, jit_code_t code_i, jit_code_t code_
             VariableDescriptor* tempDesc1 = varStack->top ();
             varStack->pop ();
             VariableDescriptor* tempDesc2 = varStack->top ();
-            varStack->push (tempDesc1);
-
+            //varStack->push (tempDesc1);
+            varStack->pop ();
             if (allocateRegister (tempDesc1) &&
                 dynamic_cast <VariableDescriptor*> (tempDesc1) != null)
             {
@@ -494,7 +494,7 @@ void JIT::processBranchInstr (string _label, jit_code_t code_i, jit_code_t code_
         mapLabels [_label] = label;
         varStack = new stack<VariableDescriptor*> (*varStackStack.top ());
         varStackStack.push (varStack);
-        printf ("NOT FOUND %s\n", _label.c_str ());
+        //printf ("NOT FOUND %s\n", _label.c_str ());
     }    
 }
 
@@ -538,7 +538,7 @@ void JIT::convertCode (MethodCode *code)
     for (int i = 0; i < code->getTotalInstructions (); i++)
     {
         int instrByteCode = code->getInstruction (i)->getByteCode ();
-        printf ("BB%d\n", instrByteCode);
+        //printf ("BB%d\n", instrByteCode);
         if (instrByteCode == 100)
         goto L100;
 
@@ -564,7 +564,7 @@ void JIT::convertCode (MethodCode *code)
             /* push.i */
             processPushInstr (sizeof (int), Integer,
                               code->getInstruction (i));
-            printf ("TO REG %d value %s\n",varStack->top()->getCurrLocation ().getValue (), code->getInstruction (i)->getOp ().c_str ());
+            //printf ("TO REG %d value %s\n",varStack->top()->getCurrLocation ().getValue (), code->getInstruction (i)->getOp ().c_str ());
             continue;
         }
         L6:
@@ -1136,7 +1136,7 @@ void JIT::convertCode (MethodCode *code)
             int index = atoi (code->getInstruction (i)->getOp ().c_str ());
             LocalDescriptor* localDesc = vectorLocalDescriptors [index];
             
-            allocateRegister (localDesc);
+            //allocateRegister (localDesc);
             varStack->push (localDesc);
             continue;
         }
@@ -1150,11 +1150,21 @@ void JIT::convertCode (MethodCode *code)
             varStack->pop ();
 
             //Topmost value will always be in the register
-            RegisterDescriptor* regDesc = vectorIntRegisters [varDesc->getCurrLocation().getValue ()];
-            regDesc->assignVariable (localDesc);
-            vectorIntRegisters [localDesc->getCurrLocation().getValue ()]->assignVariable (null);
-            localDesc->setCurrLocation (RegisterLocation,
-                                        regDesc->getRegister ());
+            if (localDesc->getCurrLocation().getLocationType () == RegisterLocation)
+            {
+                jit_movr (localDesc->getCurrLocation().getValue (),
+                          varDesc->getCurrLocation().getValue ());
+                // FIXME: Update value in memory
+                jitStack->copyRegToMem (_jit, localDesc->getMemLoc (), 
+                                        varDesc->getCurrLocation().getValue (),
+                                        getOperatorTypeFromString (localDesc->getType ()));
+            }
+            else
+            {
+                jitStack->copyRegToMem (_jit, localDesc->getCurrLocation().getValue (), 
+                                        varDesc->getCurrLocation().getValue (),
+                                        getOperatorTypeFromString (localDesc->getType ()));
+            }
 
             continue;
         }
@@ -1224,15 +1234,15 @@ int JIT::runMethodCode (MethodCode *code)
     //jump = jit_beqi (JIT_R0, 10);
     //jit_movi (JIT_R0, 3);
     //jit_patch (jump);
-    jit_pushargi((jit_word_t)" %d ll\n");
-    jit_ellipsis();
+    //jit_pushargi((jit_word_t)" %d ll\n");
+    //jit_ellipsis();
     //printf ("TOP %d \n", vectorTempDescriptors [vectorTempDescriptors.size () - 1]->getCurrLocation ().getValue ());
     //jit_pushargr_d(vectorTempDescriptors [vectorTempDescriptors.size () - 1]->getCurrLocation ().getValue ());
-    jit_pushargr(varStack->top ()->getCurrLocation ().getValue ());
+    //jit_pushargr(varStack->top ()->getCurrLocation ().getValue ());
     //jit_movi_d (JIT_F1, 9.60);
     //jit_pushargr_d (JIT_F0);
     //jit_pushargr (JIT_R0);
-    jit_finishi((jit_pointer_t)printf);
+    //jit_finishi((jit_pointer_t)printf);
     jit_ret();
     jit_epilog();
  
@@ -1240,7 +1250,7 @@ int JIT::runMethodCode (MethodCode *code)
 
     myFunction();
     jit_clear_state();
-    jit_disassemble();
+    //jit_disassemble();
     jit_destroy_state();
     finish_jit();
     return 0;

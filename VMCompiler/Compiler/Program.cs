@@ -6,6 +6,10 @@ using VMAssembler;
 
 /*
 TODO: May have to include types in instruction also like stdarg.i4 or call p (int32, int64)
+TODO: Correct if (j == 0) like instructions.
+TODO: Improve semantic analyzer.
+TODO: Add ability to convert from byte to short to int to long to float to double in semantic analyzer
+TODO: Add Constructor in assembly
 */
 
 namespace Compiler
@@ -31,23 +35,28 @@ namespace Compiler
 		public static void Main (string[] args)
 		{
 			string file = "./../../test";
+			string output = "./../../output";
 
 			if (args.Length >= 1)
-				file = args[0];
+			{
+				file = args[1];
+				output = args[2];
+			}
 	
-			/*Parser p = new Parser (file);
+			Parser p = new Parser (file);
 			InterCodeGen intercodegen = new InterCodeGen (p.startParsing (), p.symTableTree);
 			string intercode = intercodegen.generate ();
 			//Console.WriteLine ("\n" + intercode + "\n");
 			string machineCode = new MachineCodeGen ().genMachineCode (intercode, p.symTableTree, ASTNode.tempsSymTable);
 			Console.WriteLine ("LeapordASM Code Generated \n" +  machineCode);
-			*/
-			string machineCode = ".class A extends None \n{\n.size 8\n .method .entrypoint Public static void main ()\n {\n }\n}\n";
+
 			VMAssembler.VMAssembler assembler = new VMAssembler.VMAssembler ("./../../../byte_code_specification_stack");
 			List<byte> code = assembler.getCode (machineCode);
-			string output = "./../../output";
+			File.Delete (output);
 			FileStream stream = File.Open (output, FileMode.OpenOrCreate);
-			stream.Write (code.ToArray (), 0, code.Count);
+			byte[] arr = code.ToArray ();
+			stream.Write (arr, 0, code.Count);
+			stream.Close ();
 		}
 	}
 }

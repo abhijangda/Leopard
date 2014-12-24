@@ -34,7 +34,7 @@ namespace VMAssembler
 
 		public static byte[] ConvertToByteList (short value)
 		{
-			return BitConverter.GetBytes (value);
+			return ConvertStringToBytes(value.ToString ());
 		}
 
 		public static byte[] ConvertToByteList (float value)
@@ -265,13 +265,25 @@ namespace VMAssembler
 										i += 1;
 									}
 								}
+								else if (Regex.IsMatch (line, @"\s*\w[\w\d]*\:"))
+								{
+									MethodCode.Instruction instruction = new MethodCode.Instruction ();
+
+									instruction.Add (100);
+									byte[] listopbytes;
+									line = line.Trim ();
+									line = line.Substring (0, line.Length - 1);
+									listopbytes = ConvertStringToBytes (line.Trim ());
+									instruction.Add ((byte)listopbytes.Length);
+									instruction.AddRange (listopbytes);
+									listInstructions.Add (instruction);
+								}
 								else
 								{
 									string instr;
 									string op;
 									byte byteCode;
 									string[] split;
-									string optype;
 									byte[] listopbytes = null;
 
 									split = line.Split (" ".ToCharArray (), 3);
@@ -284,42 +296,16 @@ namespace VMAssembler
 									if (split.Length == 2 && split[1] != "")
 									{
 										op = split [1];
-										optype = getType (op);
-
-										if (optype == "int")
-										{
-											listopbytes = ConvertToByteList (int.Parse (op));
-										}
-										else if (optype == "char")
-										{
-											listopbytes = ConvertToByteList (char.Parse (op));
-										}
-										else if (optype == "short")
-										{
-											listopbytes = ConvertToByteList (short.Parse (op));
-										}
-										else if (optype == "long")
-										{
-											listopbytes = ConvertToByteList (long.Parse (op));
-										}
-										else if (optype == "float")
-										{
-											listopbytes = ConvertToByteList (float.Parse (op));
-										}
-										else if (optype == "double")
-										{
-											listopbytes = ConvertToByteList (double.Parse (op));
-										}
-										else if (optype == "string")
-										{
-											listopbytes = ConvertStringToBytes (op);
-										}
-
+										listopbytes = ConvertStringToBytes (op);
 										instruction.Add ((byte)listopbytes.Length);
 										instruction.AddRange (listopbytes);
-
-										listInstructions.Add (instruction);
 									}
+									else
+									{
+										instruction.Add ((byte)0);
+									}
+
+									listInstructions.Add (instruction);
 								}
 
 								i++;

@@ -536,7 +536,7 @@ namespace Compiler
 				{
 					//conditional statements
 					string trimed = matches[i].Value.TrimStart();
-					string source = trimed.Substring ("iffalse".Length, trimed.IndexOf ("goto")).Trim ();
+					string source = trimed.Substring ("iffalse".Length, trimed.IndexOf ("goto") - "iffalse".Length).Trim ();
 					string label = trimed.Substring (trimed.IndexOf ("goto") + "goto".Length).Trim ();
 					Type sourcetype = getTypeForString (source, currSymbolTable, tempSymbolTable,
 						currParamSymTable, out isArgument);
@@ -714,14 +714,16 @@ namespace Compiler
 					foreach (string op in operators)
 					{
 						//Include case when an array element is set
-						if (Regex.IsMatch (matches[i].Value, @"\s*[\w\d]+\s*=\s*[\w\d]+\s*\" + op + @"\s*[\w\d]+$"))
+						if ((Regex.IsMatch (matches[i].Value, @"\s*[\w\d]+\s*=\s*[\w\d.]+\s*\" + op + @"\s*[\w\d.]+$") ||
+							 Regex.IsMatch (matches[i].Value, @"\s*[\w\d]+\s*=\s*[\w\d]+\s*\" + op + @"\s*[\w\d]+$")) &&
+							matches[i].Value.IndexOf (op) != -1)
 						{
 							string instruction = getInstructionFromOp (op);
 							string trimed = matches[i].Value.TrimStart();
 							string result = trimed.Substring(0, trimed.IndexOf(" ="));
 							string op1 = trimed.Substring(trimed.IndexOf("=") + 1,
 								trimed.IndexOf(op) - (trimed.IndexOf("=") + 1)).Trim ();
-							string op2 = trimed.Substring(trimed.IndexOf(op) + 1).Trim ();
+							string op2 = trimed.Substring(trimed.IndexOf(op) + op.Length).Trim ();
 							Type type1 = getTypeForString (op1, currSymbolTable, tempSymbolTable,
 															currParamSymTable, out isArgument);
 							string op1instruction = "";

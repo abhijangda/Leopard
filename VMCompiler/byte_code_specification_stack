@@ -25,7 +25,7 @@
 25 ble  <label> //Branch to target if less than or equal to.  
 26 blt  <label> //Branch to target if less than.  
 27 add //Add two values, and push the result on the stack
-28 sub //Subtract value2 from value1, and push the result on the stack
+28 sub //Subtract topmost value from second topmost value, and push the result on the stack
 29 mul   //Multiply values.  and push the result on the stack
 30 div   //Divide two values to return a quotient in floating point and push the result on the stack
 31 div.un   //Divide two values, unsigned, returning a quotient and push the result on the stack
@@ -63,3 +63,4 @@
 63 stloc <uint16 (indx)> //Pop a value from stack into local variable indx.
 64 ldfield <field> //Load the field of object
 65 stfield <field>
+100 Before a Label special byte "100" is added to mark as the starting of label

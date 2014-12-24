@@ -261,6 +261,7 @@ class JIT
         TempDescriptor* createTempDescriptor (int size, OperatorType type, string value);
         void processPushInstr (int size, OperatorType type, Instruction* instr);
         void processArithInstr (jit_code_t code_i, jit_code_t code_f, jit_code_t code_d);
+        void processBranchInstr (string label, jit_code_t code_i, jit_code_t code_f, jit_code_t code_d);
 
     public:
         JIT ();

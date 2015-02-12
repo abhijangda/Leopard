@@ -11,6 +11,7 @@ LeopardVM_SOURCES = src/classinfo.cpp \
  src/jit.cpp \
  src/jit.h \
  src/stack.cpp \
+ src/heapallocator.cpp \
  src/main.cpp \
  src/memberinfo.cpp \
  src/memberinfo.h \

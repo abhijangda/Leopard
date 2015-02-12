@@ -13,6 +13,13 @@ string char_to_string (char c)
     return s;
 }
 
+int convert_string_to_int (string s)
+{
+    int i;
+    istringstream (s) >> i;
+    return i;
+}
+
 long convert_byte_array_to_long (byte array[], bool isLittleEndian)
 {
     int i = 0;

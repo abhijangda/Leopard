@@ -1,10 +1,39 @@
 #include <fstream>
 #include <vector>
+#include <stdio.h>
+#include <sstream>
 
 #include "helper_functions.h"
 #include "vm.h"
 
 using namespace std;
+extern VirtualMachine* ptrVM;
+extern JIT* currentJIT;
+extern unsigned long arrayAddress;
+
+/* Returns the address of the allocated object */
+long VirtualMachine::allocateArray (char* type, int size)
+{
+    string stype (type);
+    /*for (char *i = type; i != 0; i++)
+    {
+        stype += (*i;
+    }
+    */
+    OperatorType optype = getOperatorTypeFromString (stype);
+    int opsize = getSizeFromOperatorType (optype);
+
+    if (optype == Reference)
+    {
+        /* A Class has to be allocated */
+        return 0;
+    }
+    
+    MemoryBlock *memBlock = ptrVM->getHeapAllocator ()->allocate (opsize*size);
+    arrayAddress = memBlock->getStartPos();
+
+    return memBlock->getStartPos ();
+}
 
 int VirtualMachine::start (string filename)
 {
@@ -44,7 +73,7 @@ int VirtualMachine::read (const string filename)
     int totalClasses;
     int i;
     ifstream fileStream (filename.c_str (), ios::in | ios::binary | ios::ate);
-    
+    isLittleEndian = 0;
     if (!fileStream.is_open ())
         return -1;
     
@@ -166,11 +195,30 @@ int VirtualMachine::read (const string filename)
                 memblockIter += typelength;
                 int local_size = convert_byte_array_to_integer (memblock + memblockIter + 1,
                                                                 isLittleEndian);
-                vectorLocals.insert (vectorLocals.end (), 
-                                     (new Local (local_number, local_size, type_name)));
+                int bracket_pos = 0;
+
+                if ((bracket_pos = type_name.find ('[')) != string::npos)
+                {
+                    string _type_name = type_name;
+                    int n_elements = 0;
+
+                    type_name = _type_name.substr (0, bracket_pos);
+                    n_elements = convert_string_to_int (_type_name.substr (bracket_pos + 1, 
+                                                                           _type_name.find (']') - bracket_pos - 1));
+                    vectorLocals.insert (vectorLocals.end (),
+                                         (new LocalArray (local_number, local_size, type_name, n_elements)));
+                }
+                else
+                {
+                    vectorLocals.insert (vectorLocals.end (), 
+                                         (new Local (local_number, local_size, type_name)));
+                }
+
                 memblockIter += 4;
                 k++;
             }
+        
+            //printf ("LOCALS %d\n", vectorLocals.size ());
             
             /* Reading instructions */
             long n_instructions = convert_byte_array_to_long (memblock + memblockIter + 1, 

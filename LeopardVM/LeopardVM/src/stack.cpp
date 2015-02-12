@@ -1,4 +1,5 @@
 #include "jit.h"
+#include <stdio.h>
 
 int JITStack::allocateStack (jit_state* _jit, int size)
 {
@@ -67,6 +68,98 @@ void JITStack::copyMemToReg (jit_state* _jit, int loc, int reg, OperatorType typ
     }
 }
 
+void JITStack::copyMemrToReg (jit_state* _jit, int loc, int reg, OperatorType type)
+{
+    switch (type)
+    {
+        case SignedChar:
+            jit_ldr_c (reg, loc);
+            break;
+                                
+        case UnsignedChar:
+            jit_ldr_uc (reg, loc);
+            break;
+        
+        case Short:
+            jit_ldr_s (reg, loc);
+            break;
+        
+        case UnsignedShort:
+            jit_ldr_us (reg, loc);
+            break;
+        
+        case Integer:
+            jit_ldr_i (reg, loc);
+            break;
+        
+        case UnsignedInteger:
+            jit_ldr_ui (reg, loc);
+            break;
+        
+        case Long:
+        case Reference:
+            jit_ldr_l (reg, loc);
+            break;
+        
+        case Float:
+            jit_ldr_f (reg, loc);
+            break;
+        
+        case Double:
+            jit_ldr_d (reg, loc);
+            break;
+        
+        default:
+            break;
+    }
+}
+
+void JITStack::copyMemxrToReg (jit_state* _jit, int loc, int loc2, int reg, OperatorType type)
+{
+    switch (type)
+    {
+        case SignedChar:
+            jit_ldxr_c (reg, loc, loc2);
+            break;
+                                
+        case UnsignedChar:
+            jit_ldxr_uc (reg, loc, loc2);
+            break;
+        
+        case Short:
+            jit_ldxr_s (reg, loc, loc2);
+            break;
+        
+        case UnsignedShort:
+            jit_ldxr_us (reg, loc, loc2);
+            break;
+        
+        case Integer:
+            jit_ldxr_i (reg, loc, loc2);
+            break;
+        
+        case UnsignedInteger:
+            jit_ldxr_ui (reg, loc, loc2);
+            break;
+        
+        case Long:
+        case Reference:
+            jit_ldxr_l (reg, loc, loc2);
+            break;
+        
+        case Float:
+            jit_ldxr_f (reg, loc, loc2);
+            break;
+        
+        case Double:
+            jit_ldxr_d (reg, loc, loc2);
+            break;
+        
+        default:
+            break;
+    }
+}
+
 void JITStack::copyRegToMem (jit_state* _jit, int loc, int reg, OperatorType type)
 {
     switch (type)
@@ -107,6 +200,100 @@ void JITStack::copyRegToMem (jit_state* _jit, int loc, int reg, OperatorType typ
         
         case Double:
             jit_stxi_d (loc, JIT_FP, reg);
+            break;
+        
+        default:
+            break;
+    }
+}
+
+void JITStack::copyRegToMemr (jit_state* _jit, int loc, int reg, OperatorType type)
+{
+    switch (type)
+    {
+        case SignedChar:
+            jit_str_c (loc, reg);
+            break;
+                                
+        /*case UnsignedChar:
+            jit_stxr_uc (loc, JIT_FP, reg);
+            stackPointer += sizeof (unsigned char);
+            break;
+        */
+        case Short:
+            jit_str_s (loc, reg);
+            break;
+        
+        /*case UnsignedShort:
+            jit_stxirus (loc, JIT_FP, reg);
+            break;
+        */
+        case Integer:
+            jit_str_i (loc, reg);
+            return;
+        
+        /*case UnsignedInteger:
+            jit_stxr_ui (loc, JIT_FP, reg);
+            break;
+        */
+        case Long:
+        case Reference:
+            jit_str_l (loc, reg);
+            break;
+        
+        case Float:
+            jit_str_f (loc, reg);
+            break;
+        
+        case Double:
+            jit_str_d (loc, reg);
+            break;
+        
+        default:
+            break;
+    }
+}
+
+void JITStack::copyRegToMemxr (jit_state* _jit, int loc, int reg, OperatorType type)
+{
+    switch (type)
+    {
+        case SignedChar:
+            jit_stxr_c (loc, JIT_FP, reg);
+            break;
+                                
+        /*case UnsignedChar:
+            jit_stxr_uc (loc, JIT_FP, reg);
+            stackPointer += sizeof (unsigned char);
+            break;
+        */
+        case Short:
+            jit_stxr_s (loc, JIT_FP, reg);
+            break;
+        
+        /*case UnsignedShort:
+            jit_stxirus (loc, JIT_FP, reg);
+            break;
+        */
+        case Integer:
+            jit_stxr_i (loc, JIT_FP, reg);
+            return;
+        
+        /*case UnsignedInteger:
+            jit_stxr_ui (loc, JIT_FP, reg);
+            break;
+        */
+        case Long:
+        case Reference:
+            jit_stxr_l (loc, JIT_FP, reg);
+            break;
+        
+        case Float:
+            jit_stxr_f (loc, JIT_FP, reg);
+            break;
+        
+        case Double:
+            jit_stxr_d (loc, JIT_FP, reg);
             break;
         
         default:

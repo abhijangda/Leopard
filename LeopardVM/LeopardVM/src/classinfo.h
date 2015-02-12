@@ -16,6 +16,10 @@ enum AccessSpecifier
     Protected
 };
 
+enum LocalType
+{
+};
+
 class MemberInfo
 {
     protected:
@@ -81,7 +85,7 @@ class Instruction
 
 class Local
 {
-    private:
+    protected:
         int number;
         int size;
         string type;
@@ -103,6 +107,31 @@ class Local
         }
     
         Local (int _n, int _size, string _type);
+    
+        virtual ~Local () {}
+};
+
+class LocalArray : public Local
+{
+    private:
+        int n_elements;
+    
+    public:
+        LocalArray (int _n, int _size, string _type_element, int _n_elements) : Local (_n, _size, _type_element)
+        {
+            n_elements = _n_elements;
+        }
+
+        int getElements () const
+        {
+            return n_elements;
+        }
+    
+        virtual ~LocalArray () {}
+};
+
+class LocalReference
+{
 };
 
 class MethodCode

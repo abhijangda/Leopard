@@ -97,6 +97,7 @@ am__dirstamp = $(am__leading_dot)dirstamp
 am_LeopardVM_OBJECTS = src/LeopardVM-classinfo.$(OBJEXT) \
 	src/LeopardVM-gc.$(OBJEXT) src/LeopardVM-info.$(OBJEXT) \
 	src/LeopardVM-jit.$(OBJEXT) src/LeopardVM-stack.$(OBJEXT) \
+	src/LeopardVM-heapallocator.$(OBJEXT) \
 	src/LeopardVM-main.$(OBJEXT) \
 	src/LeopardVM-memberinfo.$(OBJEXT) \
 	src/LeopardVM-methodinfo.$(OBJEXT) src/LeopardVM-vm.$(OBJEXT) \
@@ -291,6 +292,7 @@ LeopardVM_SOURCES = src/classinfo.cpp \
  src/jit.cpp \
  src/jit.h \
  src/stack.cpp \
+ src/heapallocator.cpp \
  src/main.cpp \
  src/memberinfo.cpp \
  src/memberinfo.h \
@@ -400,6 +402,8 @@ src/LeopardVM-jit.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/LeopardVM-stack.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/LeopardVM-heapallocator.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 src/LeopardVM-main.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/LeopardVM-memberinfo.$(OBJEXT): src/$(am__dirstamp) \
@@ -424,6 +428,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/LeopardVM-classinfo.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/LeopardVM-gc.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/LeopardVM-heapallocator.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/LeopardVM-helper_functions.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/LeopardVM-info.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/LeopardVM-jit.Po@am__quote@
@@ -518,6 +523,20 @@ src/LeopardVM-stack.obj: src/stack.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/stack.cpp' object='src/LeopardVM-stack.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(LeopardVM_CXXFLAGS) $(CXXFLAGS) -c -o src/LeopardVM-stack.obj `if test -f 'src/stack.cpp'; then $(CYGPATH_W) 'src/stack.cpp'; else $(CYGPATH_W) '$(srcdir)/src/stack.cpp'; fi`
+
+src/LeopardVM-heapallocator.o: src/heapallocator.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(LeopardVM_CXXFLAGS) $(CXXFLAGS) -MT src/LeopardVM-heapallocator.o -MD -MP -MF src/$(DEPDIR)/LeopardVM-heapallocator.Tpo -c -o src/LeopardVM-heapallocator.o `test -f 'src/heapallocator.cpp' || echo '$(srcdir)/'`src/heapallocator.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/LeopardVM-heapallocator.Tpo src/$(DEPDIR)/LeopardVM-heapallocator.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/heapallocator.cpp' object='src/LeopardVM-heapallocator.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(LeopardVM_CXXFLAGS) $(CXXFLAGS) -c -o src/LeopardVM-heapallocator.o `test -f 'src/heapallocator.cpp' || echo '$(srcdir)/'`src/heapallocator.cpp
+
+src/LeopardVM-heapallocator.obj: src/heapallocator.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(LeopardVM_CXXFLAGS) $(CXXFLAGS) -MT src/LeopardVM-heapallocator.obj -MD -MP -MF src/$(DEPDIR)/LeopardVM-heapallocator.Tpo -c -o src/LeopardVM-heapallocator.obj `if test -f 'src/heapallocator.cpp'; then $(CYGPATH_W) 'src/heapallocator.cpp'; else $(CYGPATH_W) '$(srcdir)/src/heapallocator.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/LeopardVM-heapallocator.Tpo src/$(DEPDIR)/LeopardVM-heapallocator.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/heapallocator.cpp' object='src/LeopardVM-heapallocator.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(LeopardVM_CXXFLAGS) $(CXXFLAGS) -c -o src/LeopardVM-heapallocator.obj `if test -f 'src/heapallocator.cpp'; then $(CYGPATH_W) 'src/heapallocator.cpp'; else $(CYGPATH_W) '$(srcdir)/src/heapallocator.cpp'; fi`
 
 src/LeopardVM-main.o: src/main.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(LeopardVM_CXXFLAGS) $(CXXFLAGS) -MT src/LeopardVM-main.o -MD -MP -MF src/$(DEPDIR)/LeopardVM-main.Tpo -c -o src/LeopardVM-main.o `test -f 'src/main.cpp' || echo '$(srcdir)/'`src/main.cpp

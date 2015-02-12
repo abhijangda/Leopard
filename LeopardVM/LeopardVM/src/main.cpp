@@ -4,6 +4,8 @@
 
 using namespace std;
 
+VirtualMachine* ptrVM;
+
 int main (int argc, char *argv[])
 {
     if (argc == 1)
@@ -14,6 +16,7 @@ int main (int argc, char *argv[])
 
     char *filename = argv[1];
     VirtualMachine vm;
+    ptrVM = &vm;
     string s (filename);
     init_jit(argv[0]);
     vm.start (s);

@@ -12,24 +12,9 @@ extern "C"
 #define __JIT_H__
 
 #define null 0
+#define LULL 0
 
 typedef void (*pvfi)();
-
-enum OperatorType
-{
-    SignedChar,
-    UnsignedChar,
-    Short,
-    UnsignedShort,
-    Integer,
-    UnsignedInteger,
-    Long,
-    Float,
-    Double,
-    Reference,
-};
-
-typedef enum OperatorType OperatorType;
 
 enum LocationType
 {
@@ -61,8 +46,12 @@ class JITStack
         void stackPop (jit_state* _jit, int reg, OperatorType type);
         int allocateStack (jit_state* _jit, int size);
         void copyMemToReg (jit_state* _jit, int loc, int reg, OperatorType type);
+        void copyMemrToReg (jit_state* _jit, int loc, int reg, OperatorType type);
+        void copyMemxrToReg (jit_state* _jit, int loc, int loc2, int reg, OperatorType type);
         void allocateTemporary (jit_state *_jit, TempDescriptor* tempDesc);
         void copyRegToMem (jit_state* _jit, int loc, int reg, OperatorType type);
+        void copyRegToMemxr (jit_state* _jit, int loc, int reg, OperatorType type);
+        void copyRegToMemr (jit_state* _jit, int loc, int reg, OperatorType type);
 
         int getPointer () 
         {
@@ -259,9 +248,10 @@ class JIT
         void _allocateRegister (VariableDescriptor *varDesc, RegisterDescriptor* regDesc);
         void copyToMemory (VariableDescriptor *varDesc);
         TempDescriptor* createTempDescriptor (int size, OperatorType type, string value);
-        void processPushInstr (int size, OperatorType type, Instruction* instr);
+        void processPushInstr (int size, OperatorType type, string op);
         void processArithInstr (jit_code_t code_i, jit_code_t code_f, jit_code_t code_d);
         void processBranchInstr (string label, jit_code_t code_i, jit_code_t code_f, jit_code_t code_d);
+        void copyVariables (VariableDescriptor *src, VariableDescriptor *dest);
 
     public:
         JIT ();

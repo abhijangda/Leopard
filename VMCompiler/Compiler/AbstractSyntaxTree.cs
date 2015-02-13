@@ -224,29 +224,94 @@ namespace Compiler
 	{
 		public string objectName {get; private set;}
 		public string memberName {get; private set;}
+		public ExpressionNode objectNode {get; private set;}
+		public ExpressionNode memberNode {get; private set;}
 		public bool isfirst;
 
 		public override void addNodes (List<ASTNode> nodes, SymbolTable symTable)
 		{
-			objectName = ((IDNode)nodes[0]).id;
+			objectNode = (ExpressionNode)nodes[0];
+			memberNode = (ExpressionNode)nodes[2];
+
+			if (nodes[0] is IDNode)
+			{
+				objectName = ((IDNode)nodes[0]).id;
+			}
+			else if (nodes[0] is MemberAccessNode)
+			{
+				objectName = nodes[0].ToString ();
+			}
+
 			memberName = ((IDNode)nodes[2]).id;
 		}
 
 		public override Type getType (SymbolTable symTable)
 		{
- 			return ((ClassType)symTable.getType (objectName)).symTable.getType (memberName);
+			if (objectNode is IDNode)
+			{
+				ClassType classType = (ClassType)symTable.getType (objectName);
+				return classType.symTable.getType (memberName);
+			}
+			else
+			{
+				MemberType memberType = (MemberType)objectNode.getType (symTable);
+				ClassType classType = (ClassType)memberType.type;
+				return classType.symTable.getType (memberName);
+			}
 		}
 
 		public override Code generateCode (SymbolTable currSymTable, SymbolTable rootSymTable, int indent)
 		{
 			string temp = getTemporaryName (this, currSymTable);
 
+			/*if (isfirst)
+			{
+				if (objectNode is IDNode)
+				{
+					return new Code (getIndentString (indent) +
+						temp + " = " + objectName + "." + memberName, temp);
+				}
+				else
+				{
+					MemberAccessNode memAccess;
+					Code objNodeCode;
+
+					memAccess = (MemberAccessNode)objectNode;
+					memAccess.isfirst = isfirst;
+					objNodeCode = objectNode.generateCode (currSymTable, rootSymTable, indent);
+
+					return new Code (objNodeCode.code + "\n" + getIndentString (indent) + 
+						objNodeCode.returnExpression + "." + memberName + " = " + temp, temp);
+				}
+			}*/
 			if (isfirst)
-				return new Code (getIndentString (indent) + 
+			{
+				return new Code (getIndentString (indent) +
 					objectName + "." + memberName + " = " + temp, temp);
+			}
 			else
-				return new Code (getIndentString (indent) + 
+			{
+				return new Code (getIndentString (indent) +
 					temp + " = " + objectName + "." + memberName, temp);
+			}
+		}
+
+		public override string ToString ()
+		{
+			string s = "";
+
+			if (objectNode is IDNode)
+			{
+				s += objectName;
+			}
+			else
+			{
+				s += objectNode.ToString ();
+			}
+
+			s += "." + memberName;
+
+			return s;
 		}
 	}
 
@@ -892,18 +957,20 @@ namespace Compiler
 
 			SymbolTable classSymTable = ((ClassType)currSymTable.getClassType (classID.id)).symTable;
 
-			foreach (ASTNode node in members.listNodes)
+			if (members != null)
 			{
-				if (node is FieldDeclaration)
-					s += node.generateCode (classSymTable, rootSymTable, indent + 1).code + "\n";
+				foreach (ASTNode node in members.listNodes)
+				{
+					if (node is FieldDeclaration)
+						s += node.generateCode (classSymTable, rootSymTable, indent + 1).code + "\n";
+				}
+	
+				foreach (ASTNode node in members.listNodes)
+				{
+					if (!(node is FieldDeclaration))
+						s += node.generateCode (classSymTable, rootSymTable, indent + 1).code + "\n";
+				}
 			}
-
-			foreach (ASTNode node in members.listNodes)
-			{
-				if (!(node is FieldDeclaration))
-					s += node.generateCode (classSymTable, rootSymTable, indent + 1).code + "\n";
-			}
-
 			s += "}\n";
 		
 			return new Code (s, "");

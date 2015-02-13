@@ -175,9 +175,11 @@ namespace Compiler
 			return instruction;
 		}
 			
-		public string getStoreInstructionForMember (string instr, Dictionary <string, int> dictNumber,
-			Dictionary <string, int> argDictNumber, bool isArgument, string indent)
+		public string getStoreInstructionForMember (string instr, MemberType memberType,
+			Dictionary <string, int> dictNumber, Dictionary <string, int> argDictNumber, 
+			bool isArgument, string indent)
 		{
+			string className = memberType.parentType.name;
 			if (instr.Contains ("."))
 			{
 				/* member of an object */
@@ -187,24 +189,27 @@ namespace Compiler
 				if (isArgument)
 				{
 					/* isArgument is true means object is the argument */
-					return indent + "ldarg " + argDictNumber [obj] + "\n" + indent + "stfield " + member + "\n";
+					return indent + "ldarg " + argDictNumber [obj] + "\n" + indent + "stfield " + className + "." + member + "\n";
 				}
 				else
 				{
 					/* object is a local variable */
-					return indent + "ldloc " + dictNumber [obj] + "\n" + indent + "stfield " + member + "\n";
+					return indent + "ldloc " + dictNumber [obj] + "\n" + indent + "stfield " + className + "." + member + "\n";
 				}
 			}
 			else
 			{
 				/* member of this */
-				return indent + "ldarg 0\n" + indent + "stfield " + instr + "\n";
+				return indent + "ldarg 0\n" + indent + "stfield " + className + "." + instr + "\n";
 			}
 		}
 			
-		public string getLoadInstructionForMember (string instr, Dictionary <string, int> dictNumber, 
-			Dictionary <string, int> argDictNumber, bool isArgument, string indent)
+		public string getLoadInstructionForMember (string instr, MemberType memberType,
+			Dictionary <string, int> dictNumber, Dictionary <string, int> argDictNumber, 
+			bool isArgument, string indent)
 		{
+			string className = memberType.parentType.name;
+	
 			if (instr.Contains ("."))
 			{
 				/* member of an object */
@@ -214,18 +219,18 @@ namespace Compiler
 				if (isArgument)
 				{
 					/* isArgument is true means object is the argument */
-					return indent + "ldarg " + argDictNumber [obj] + "\n" + indent + "ldfield " + member + "\n";
+					return indent + "ldarg " + argDictNumber [obj] + "\n" + indent + "ldfield " + className + "." + member + "\n";
 				}
 				else
 				{
 					/* object is a local variable */
-					return indent + "ldloc " + dictNumber [obj] + "\n" + indent + "ldfield " + member + "\n";
+					return indent + "ldloc " + dictNumber [obj] + "\n" + indent + "ldfield " + className + "." + member + "\n";
 				}
 			}
 			else
 			{
 				/* member of this */
-				return indent + "ldarg 0\n" + indent + "ldfield " + instr + "\n";
+				return indent + "ldarg 0\n" + indent + "ldfield " + className + "." + instr + "\n";
 			}
 		}
 
@@ -234,7 +239,7 @@ namespace Compiler
 		{
 			if (typeresult is MemberType)
 			{
-				return getStoreInstructionForMember (result, dictNumber, 
+				return getStoreInstructionForMember (result, (MemberType)typeresult, dictNumber, 
 					argDictNumber, isresultArgument, indent);
 			}
 			else if (!(typeresult is TemporaryType))
@@ -288,7 +293,7 @@ namespace Compiler
 
 			if (optype is MemberType)
 			{
-				return getLoadInstructionForMember (op, dictNumber, argDictNumber,
+				return getLoadInstructionForMember (op, (MemberType)optype, dictNumber, argDictNumber,
 					isArgument, indent);
 			}
 
@@ -357,7 +362,7 @@ namespace Compiler
 						continue;
 					}
 
-					machineCode += ".size " + currClass.width + "\n";
+					machineCode += ".size " + currSymbolTable.getTotalSize () + "\n";
 				}
 				else if (Regex.IsMatch (matches[i].Value, @"\s*{"))
 				{
@@ -699,7 +704,7 @@ namespace Compiler
 						currParamSymTable, out isSourceArgument);
 					machineCode += getLoadInstruction (sourcetype, source, dictNumber, argDictNumber,
 						isSourceArgument, indent);
-				
+
 					Type typeresult = getTypeForString (result, currSymbolTable, tempSymbolTable, 
 						currParamSymTable, out isresultArgument);
 

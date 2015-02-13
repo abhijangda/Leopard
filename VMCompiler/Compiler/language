@@ -124,6 +124,7 @@ unary-expression -> mutable
 mutable -> 'ID'
 mutable -> mutable '[' expression ']'
 mutable -> member-access
+member-access -> member-access '.' 'ID'
 member-access -> 'ID' '.' 'ID'
 immutable -> '(' expression ')'
 immutable -> call

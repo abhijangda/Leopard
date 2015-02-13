@@ -10,15 +10,16 @@ using System.Collections.Generic;
 
 namespace Compiler
 {
+	[Serializable()]
 	public class Parser
 	{
 		Lexer lexer;
 		Grammar g;
 		Stack <int> stackStates;
 		public SymbolTable symTableTree;
-		List<CompileError> errors;
+		//List<CompileError> errors;
 
-		public Parser (string file)
+		public Parser ()
 		{
 			string grammar = File.ReadAllText ("./../../language");
 			g = new Grammar (grammar);
@@ -27,12 +28,9 @@ namespace Compiler
 			g.createGoToTable ();
 
 			//g.displayStates ();
-			lexer = new Lexer (file);
-			stackStates = new Stack<int> ();
-			stackStates.Push (0);
 
 			symTableTree = new SymbolTable (null);
-			errors = new List<CompileError> ();
+			//errors = new List<CompileError> ();
 		}
 
 		private ASTNode getNode (Production p, SymbolTable symTable)
@@ -133,8 +131,12 @@ namespace Compiler
 			return null;
 		}
 
-		public ASTNode startParsing ()
+		public ASTNode startParsing (string file)
 		{
+			lexer = new Lexer (file);
+			stackStates = new Stack<int> ();
+			stackStates.Push (0);
+
 			Token t = lexer.scan ();
 			string sym_str = "";
 			sym_str = t.ToString ();

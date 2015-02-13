@@ -1,12 +1,21 @@
 class A
 {
+    public int f;
+    public int k;
+    public int y;
+    public int p;
+}
+
+class B
+{    
+    public A a;
+    public int h;
+    public int k;
+    
 	public static void main ()
     {
-		float k;
-		
-		k = 0;
-		if (k == 0)
-		{
-		}
+        B b;
+        
+    
     }
 }

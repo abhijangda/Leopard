@@ -4,6 +4,7 @@ using System.IO;
 
 namespace Compiler
 {
+	[Serializable ()]
 	public enum Tag
 	{
 		//Syntax Symbols
@@ -99,7 +100,7 @@ namespace Compiler
 		Private,
 		Protected, 
 	}
-
+	[Serializable ()]
 	public class Token
 	{
 		public Tag tag;
@@ -138,7 +139,7 @@ namespace Compiler
 			return c.ToString ();
 		}
 	}
-
+	[Serializable ()]
 	public class Num : Token
 	{
 		public long value {get; protected set;}
@@ -153,7 +154,7 @@ namespace Compiler
 			return value.ToString ();
 		}
 	}
-
+	[Serializable ()]
 	public class CString : Token
 	{
 		public string value {get; protected set;}
@@ -168,7 +169,7 @@ namespace Compiler
 			return value;
 		}
 	}
-
+	[Serializable ()]
 	public class Character : Token
 	{
 		public char value {get; protected set;}
@@ -183,7 +184,7 @@ namespace Compiler
 			return value.ToString ();
 		}
 	}
-
+	[Serializable ()]
 	public class Real : Token
 	{
 		public double value {get; protected set;}
@@ -197,7 +198,7 @@ namespace Compiler
 			return value.ToString ();
 		}
 	}
-
+	[Serializable ()]
 	public class Word : Token
 	{
 		public static readonly Word LogicalAnd;
@@ -284,7 +285,7 @@ namespace Compiler
 			return value;
 		}
 	}
-
+	[Serializable ()]
 	public class Type : Word
 	{
 		public static readonly ValueType Integer;
@@ -345,7 +346,7 @@ namespace Compiler
 				return t2;
 		}
 	}
-
+	[Serializable ()]
 	public class ValueType : Type
 	{	
 		public ValueType (string _s, Tag _tag, int w) : base (_s, _tag, w)
@@ -353,6 +354,7 @@ namespace Compiler
 		}
 	}
 
+	[Serializable ()]
 	public class Lexer
 	{
 		public int line {get; private set;}

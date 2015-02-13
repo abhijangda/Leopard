@@ -5,6 +5,7 @@ using Compiler;
 
 namespace LanguageGrammar
 {
+	[Serializable ()]
 	public abstract class Symbol
 	{
 		protected string value;
@@ -21,7 +22,7 @@ namespace LanguageGrammar
 			return value.Trim ();
 		}
 	}
-
+	[Serializable ()]
 	public class Terminal : Symbol
 	{
 		public Terminal (string _v, Production _p) : base (_v, _p)
@@ -33,7 +34,7 @@ namespace LanguageGrammar
 			return value.Trim ();
 		}
 	}
-
+	[Serializable ()]
 	public class ID : Terminal
 	{
 		public string id;
@@ -43,7 +44,7 @@ namespace LanguageGrammar
 			id = value;
 		}
 	}
-	
+	[Serializable ()]
 	public class Num : Terminal
 	{
 		public string num;
@@ -52,7 +53,7 @@ namespace LanguageGrammar
 			num = _num;
 		}
 	}
-
+	[Serializable ()]
 	public class NonTerminal : Symbol
 	{
 		public NonTerminal (string _v, Production _p) : base (_v, _p)
@@ -64,7 +65,7 @@ namespace LanguageGrammar
 			return value.Trim ();
 		}
 	}
-
+	[Serializable ()]
 	public class Production
 	{
 		public NonTerminal head {get; private set;}
@@ -100,7 +101,7 @@ namespace LanguageGrammar
 			return productionStr;
 		}
 	}
-
+	[Serializable ()]
 	public class Item
 	{
 		public short dotAt {get; private set;}
@@ -147,7 +148,7 @@ namespace LanguageGrammar
 			return false;
 		}
 	}
-
+	[Serializable ()]
 	public class State : List<Item>
 	{
 		public short stateNumber;
@@ -183,9 +184,10 @@ namespace LanguageGrammar
 		}
 
 	}
-    
+	[Serializable ()]
 	public class ActionTable
 	{
+		[Serializable ()]
 		public class Action
 		{
 			public enum ActionType
@@ -273,9 +275,10 @@ namespace LanguageGrammar
 		}
 	}
 
-
+	[Serializable ()]
 	public class GoToTable
 	{
+		[Serializable ()]
 		private class StateEntry 
 		{
 			public int atState, toState;
@@ -341,7 +344,7 @@ namespace LanguageGrammar
 			return s;
 		}
 	}
-
+	[Serializable ()]
 	public class Grammar
 	{
 		string stringRep;

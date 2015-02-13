@@ -3,13 +3,14 @@ using System.Collections.Generic;
 
 namespace Compiler
 {
+	[Serializable ()]
 	public enum AccessSpecifier
 	{
 		Private,
 		Protected,
 		Public,
 	}
-
+	[Serializable ()]
 	public class FunctionType : MemberType
 	{
 		public SymbolTable paramSymTable {get; private set;}
@@ -38,7 +39,7 @@ namespace Compiler
 			}
 		}
 	}
-
+	[Serializable ()]
 	public class ConstructorType : MemberType
 	{
 		public SymbolTable paramSymTable {get; private set;}
@@ -65,7 +66,7 @@ namespace Compiler
 			}
 		}
 	}
-
+	[Serializable ()]
 	public class ArrayType : ReferenceType
 	{
 		public Type type {get; private set;}
@@ -84,7 +85,7 @@ namespace Compiler
 			return total_width;
 		}
 	}
-
+	[Serializable ()]
 	public class ConstantType : Type
 	{
 		public Type type {get; private set;}
@@ -94,7 +95,7 @@ namespace Compiler
 			type = t;
 		}
 	}
-
+	[Serializable ()]
 	public abstract class ReferenceType : Type
 	{
 		public override int width
@@ -111,7 +112,7 @@ namespace Compiler
 		{
 		}
 	}
-
+	[Serializable ()]
 	public class ClassType : ReferenceType
 	{
 		public SymbolTable symTable {get; private set;}
@@ -147,7 +148,7 @@ namespace Compiler
 			this.parent = parent;
 		}
 	}
-
+	[Serializable ()]
 	public class MemberType : Type
 	{
 		public AccessSpecifier accessSpecifier {get; protected set;}
@@ -164,7 +165,7 @@ namespace Compiler
 			this.parentType = parentType;
 		}
 	}
-
+	[Serializable ()]
 	public class TemporaryType : Type
 	{
 		public Type tempType {get; private set;}
@@ -173,7 +174,7 @@ namespace Compiler
 			tempType = t;
 		}
 	}
-
+	[Serializable ()]
 	public class SymbolTable
 	{
 		public SymbolTable parent{get; private set;}
@@ -276,7 +277,18 @@ namespace Compiler
 				{
 					if (symTable.dict.ContainsKey (s))
 					{
-						return ((ClassType)symTable.dict [s]).symTable.getType (w.Substring (w.IndexOf (".") + 1));
+						ClassType classType = null;
+						Type t = symTable.dict [s];
+						/*if (t is MemberType)
+						{
+							classType = (ClassType)(((MemberType)t).type);
+						}
+						else if (t is ClassType)*/
+						{
+							classType = (ClassType)t;
+						}
+
+						return classType.symTable.getType (w.Substring (w.IndexOf (".") + 1));
 					}
 
 					symTable = symTable.parent;

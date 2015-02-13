@@ -39,6 +39,11 @@ class MemoryBlock
         {
             return startPos;
         }
+    
+        byte *getMemory ()
+        {
+            return memory;
+        }
 };
 
 class ReferenceVariable
@@ -65,6 +70,36 @@ class HeapAllocator
         MemoryBlock *allocate (unsigned long size);
 };
 
+class AllocatedObject
+{
+    public:
+        AllocatedObject (ClassInfo *_classInfo, MemoryBlock* _memBlock)
+        {
+            classInfo = classInfo;
+            memBlock = _memBlock;
+        }
+
+        void addChild (AllocatedObject *child)
+        {
+            listChildren.insert (listChildren.end (), child);
+        }
+        
+        AllocatedObject* getChild (int i)
+        {
+            return listChildren[i];
+        }
+    
+        MemoryBlock* getMemBlock () const
+        {
+            return memBlock;
+        }
+
+    private:
+        ClassInfo *classInfo;
+        vector<AllocatedObject*> listChildren;
+        MemoryBlock *memBlock;
+};
+
 class VirtualMachine 
 {
     public:
@@ -80,18 +115,24 @@ class VirtualMachine
             return heapAllocator;
         }
         
-        static long allocateArray (char* type, int size);
+        static unsigned long allocateArray (char* type, int size);
+        static unsigned long allocateObject (char *type);
+        ClassInfo *getClassInfoForName (string name);
+        AllocatedObject *getAllocatedObjectForStartPos (unsigned long startPos);
+        unsigned int getPosForField (string cname, string fname, string* type);
 
     private:
         bool isLittleEndian;
         string mainFunction;
         string mainClass;
         vector<ClassInfo*> vectorClassInfo;
+        map<unsigned long, AllocatedObject*> mapAllocatedObject; 
         JIT* jit;
         HeapAllocator* heapAllocator;
         
         int read (const string filename);
         int getSizeForType (char *type);
+        AllocatedObject* _allocateObject (string type);
 };
 
 #endif /* __VM_H__ */

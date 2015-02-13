@@ -74,7 +74,11 @@ ClassInfo::ClassInfo (string _name, int _size, string _parent, vector <MemberInf
         vectorMethods.insert (vectorMethods.end (), vMethInfo [i]);
     }
 }
-  
+
+int getPosForField (string name)
+{
+}
+
 int ClassInfo::addMethodInfo (MethodInfo& methodInfo)
 {
     //vectorMethods.insert (vectorMethods.end (), methodInfo);

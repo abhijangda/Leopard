@@ -247,7 +247,7 @@ class JIT
         bool allocateRegister (VariableDescriptor *varDesc);
         void _allocateRegister (VariableDescriptor *varDesc, RegisterDescriptor* regDesc);
         void copyToMemory (VariableDescriptor *varDesc);
-        TempDescriptor* createTempDescriptor (int size, OperatorType type, string value);
+        TempDescriptor* createTempDescriptor (int size, OperatorType type, string value, string classType);
         void processPushInstr (int size, OperatorType type, string op);
         void processArithInstr (jit_code_t code_i, jit_code_t code_f, jit_code_t code_d);
         void processBranchInstr (string label, jit_code_t code_i, jit_code_t code_f, jit_code_t code_d);

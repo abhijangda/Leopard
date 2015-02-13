@@ -12,14 +12,9 @@ extern JIT* currentJIT;
 extern unsigned long arrayAddress;
 
 /* Returns the address of the allocated object */
-long VirtualMachine::allocateArray (char* type, int size)
+unsigned long VirtualMachine::allocateArray (char* type, int size)
 {
     string stype (type);
-    /*for (char *i = type; i != 0; i++)
-    {
-        stype += (*i;
-    }
-    */
     OperatorType optype = getOperatorTypeFromString (stype);
     int opsize = getSizeFromOperatorType (optype);
 
@@ -35,6 +30,105 @@ long VirtualMachine::allocateArray (char* type, int size)
     return memBlock->getStartPos ();
 }
 
+AllocatedObject *VirtualMachine::getAllocatedObjectForStartPos (unsigned long startPos)
+{
+    return mapAllocatedObject [startPos];
+}
+
+unsigned int VirtualMachine::getPosForField (string cname, string fname, string* type)
+{
+    ClassInfo *classInfo;
+    int size;
+    unsigned pos = 0;
+
+    classInfo = getClassInfoForName (cname);
+
+    for (int i = 0; i < classInfo->totalMembers (); i++)
+    {
+        if (classInfo->getMemberInfo (i)->getName () == fname)
+        {
+            if (type)
+            {
+                *type = classInfo->getMemberInfo (i)->getType ();
+            }
+
+            break;
+        }
+        
+        OperatorType optype;
+
+        optype = getOperatorTypeFromString (classInfo->getMemberInfo (i)->getType ());
+        pos += getSizeFromOperatorType (optype);
+    }
+    
+    return pos;
+}
+
+AllocatedObject* VirtualMachine::_allocateObject (string type)
+{
+    ClassInfo *classInfo;
+    int size;
+    AllocatedObject *allocatedObject;
+    MemoryBlock *memBlock;
+    int pos = 0;
+
+    classInfo = getClassInfoForName (type);
+    size = classInfo->getSize ();
+    memBlock = getHeapAllocator ()->allocate (size);
+    allocatedObject = new AllocatedObject (classInfo, memBlock);
+    /* Store the allocated objects according to their start positions, keys */
+    mapAllocatedObject [memBlock->getStartPos ()] = allocatedObject;
+
+    for (int i = 0; i < classInfo->totalMembers (); i++)
+    {
+        OperatorType opTypeChild;
+        
+        opTypeChild = getOperatorTypeFromString (classInfo->getMemberInfo (i)->getType ());
+
+        if (opTypeChild == Reference)
+        {
+            AllocatedObject *obj;
+            byte *mem;
+
+            obj = _allocateObject (classInfo->getMemberInfo (i)->getType ());
+            mem = memBlock->getMemory () + pos;
+            unsigned long memstart = obj->getMemBlock ()->getStartPos ();
+            unsigned long *lmem = (unsigned long *)mem;
+            /* Set the obtained pointer of child object to its 
+             * corresponding field in parent
+             */
+            lmem [0] = memstart;
+            allocatedObject->addChild (obj);
+        }
+    
+        pos += getSizeFromOperatorType (opTypeChild);
+    }
+
+    return allocatedObject;
+}
+
+/* Create an object of class and returns the address of the object */
+unsigned long VirtualMachine::allocateObject (char* type)
+{
+    string stype (type);
+    AllocatedObject *obj = ptrVM->_allocateObject (stype);
+    
+    return obj->getMemBlock()->getStartPos ();
+}
+
+ClassInfo *VirtualMachine::getClassInfoForName (string name)
+{    
+    for (int i = 0; i < vectorClassInfo.size (); i++)
+    {
+        if (vectorClassInfo [i]->getName () == name)
+        {
+            return vectorClassInfo[i];
+        }
+    }
+
+    return LULL;
+}
+
 int VirtualMachine::start (string filename)
 {
     /* Process file */
@@ -46,6 +140,7 @@ int VirtualMachine::start (string filename)
 
     for (int i = 0; i < vectorClassInfo.size (); i++)
     {
+        //printf ("Names %s\n", vectorClassInfo[i]->getName().c_str());
         if (vectorClassInfo [i]->getName () == mainClass)
         {
             for (int j = 0; j < vectorClassInfo [i]->totalMethods (); i++)
@@ -129,6 +224,7 @@ int VirtualMachine::read (const string filename)
         
         classSize = convert_byte_array_to_integer (memblock + memblockIter + 1, 
                                                    isLittleEndian);
+        //printf ("N %s S %d\n", className.c_str (), classSize);
         memblockIter += 4;
         len = memblock [++memblockIter];
         parentName = read_string_from_byte_array (memblock + memblockIter, len);
@@ -142,6 +238,7 @@ int VirtualMachine::read (const string filename)
             int firstinfo = memblock [++memblockIter];
             int typelength = memblock [++memblockIter];
             string type_name = read_string_from_byte_array (memblock + memblockIter, typelength);
+            //printf ("%s type name\n", type_name.c_str ());
             memblockIter += typelength;
             int membernamelen = memblock [++memblockIter];
             string membername = read_string_from_byte_array (memblock + memblockIter, membernamelen);

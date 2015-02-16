@@ -160,6 +160,52 @@ void JITStack::copyMemxrToReg (jit_state* _jit, int loc, int loc2, int reg, Oper
     }
 }
 
+void JITStack::copyMemxiToReg (jit_state* _jit, int locreg, int loc, int reg, OperatorType type)
+{
+    switch (type)
+    {
+        case SignedChar:
+            jit_ldxi_c (reg, locreg, loc);
+            break;
+                                
+        case UnsignedChar:
+            jit_ldxi_uc (reg, locreg, loc);
+            break;
+        
+        case Short:
+            jit_ldxi_s (reg, locreg, loc);
+            break;
+        
+        case UnsignedShort:
+            jit_ldxi_us (reg, locreg, loc);
+            break;
+        
+        case Integer:
+            jit_ldxi_i (reg, locreg, loc);
+            break;
+        
+        case UnsignedInteger:
+            jit_ldxi_ui (reg, locreg, loc);
+            break;
+        
+        case Long:
+        case Reference:
+            jit_ldxi_l (reg, locreg, loc);
+            break;
+        
+        case Float:
+            jit_ldxi_f (reg, locreg, loc);
+            break;
+        
+        case Double:
+            jit_ldxi_d (reg, locreg, loc);
+            break;
+        
+        default:
+            break;
+    }
+}
+
 void JITStack::copyRegToMem (jit_state* _jit, int loc, int reg, OperatorType type)
 {
     switch (type)

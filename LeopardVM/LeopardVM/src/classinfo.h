@@ -176,6 +176,11 @@ class MethodInfo : public MemberInfo
         MethodInfo (string _name, string _type, bool _isStatic, AccessSpecifier _accessSpec, 
                     vector<string> paramTypes, MethodCode* code);
         void addParamType (string type);
+        string getParamType (int index)
+        {
+            return vectorParamTypes [index];
+        }
+
         int getParamCount ()
         {
             return vectorParamTypes.size ();

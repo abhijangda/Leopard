@@ -24,6 +24,7 @@ enum LocationType
 
 class VariableDescriptor;
 class TempDescriptor;
+class LocalDescriptor;
 
 class JITStack
 {
@@ -48,6 +49,7 @@ class JITStack
         void copyMemToReg (jit_state* _jit, int loc, int reg, OperatorType type);
         void copyMemrToReg (jit_state* _jit, int loc, int reg, OperatorType type);
         void copyMemxrToReg (jit_state* _jit, int loc, int loc2, int reg, OperatorType type);
+        void copyMemxiToReg (jit_state* _jit, int locreg, int loc, int reg, OperatorType type);
         void allocateTemporary (jit_state *_jit, TempDescriptor* tempDesc);
         void copyRegToMem (jit_state* _jit, int loc, int reg, OperatorType type);
         void copyRegToMemxr (jit_state* _jit, int loc, int reg, OperatorType type);
@@ -107,7 +109,7 @@ class RegisterDescriptor
             assignedVar = null;
         }
     
-        void spill (JITStack *jitStack);
+        void spill (jit_state *_jit, JITStack *jitStack);
 
         int getRegister ()
         {
@@ -131,12 +133,12 @@ class VariableDescriptor
 {
     private:
         int size;
-        int memLocation;
+        long memLocation;
         VarType type;
         CurrentLocation currLoc;
     
     protected:
-        VariableDescriptor (int size, VarType type, CurrentLocation location, int memLoc = -1) : 
+        VariableDescriptor (int size, VarType type, CurrentLocation location, long memLoc = -1) : 
             currLoc (location.getLocationType (), location.getValue ())
         {
             this->size = size;
@@ -160,12 +162,12 @@ class VariableDescriptor
             currLoc.set (type, value);
         }
     
-        void setMemLocation (int memLoc)
+        void setMemLocation (long memLoc)
         {
             memLocation = memLoc;
         }
     
-        int getMemLoc ()
+        long getMemLoc ()
         {
             return memLocation;
         }
@@ -174,7 +176,9 @@ class VariableDescriptor
         {
             return type;
         }
-    
+            
+        static VariableDescriptor* copyVarDesc (VariableDescriptor* varDesc);
+
         virtual ~VariableDescriptor (){}
 };
 
@@ -242,6 +246,8 @@ class JIT
         vector <LocalDescriptor*> vectorLocalDescriptors;
         vector <TempDescriptor*> vectorTempDescriptors;
         map <string, JITLabel*> mapLabels;
+        unsigned long *stackPointerMem;
+        unsigned long *prevStackPointerMem;
 
         void allocateMemory (VariableDescriptor *varDesc);
         bool allocateRegister (VariableDescriptor *varDesc);
@@ -252,11 +258,26 @@ class JIT
         void processArithInstr (jit_code_t code_i, jit_code_t code_f, jit_code_t code_d);
         void processBranchInstr (string label, jit_code_t code_i, jit_code_t code_f, jit_code_t code_d);
         void copyVariables (VariableDescriptor *src, VariableDescriptor *dest);
+        void storeVariablesToMemory ();
+        void restoreVariablesFromMemory ();
 
     public:
         JIT ();
-        int runMethodCode (MethodCode* code);
-        void convertCode (MethodCode* code);
+        int runMethodCode (vector<VariableDescriptor*>* vectorArgs, MethodCode* code, 
+                           unsigned long *stackPointerMem);
+        void convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode* code);
+        jit_state* _jit;
+        //static VariableDescriptor* copyVarDesc (VariableDescriptor* varDesc);
+
+        unsigned long *getStackPointerMem ()
+        {
+            return stackPointerMem;
+        }
+        
+        ~JIT ()
+        {
+            delete stackPointerMem;
+        }
 };
 
 #endif

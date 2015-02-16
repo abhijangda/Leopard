@@ -11,6 +11,38 @@ extern VirtualMachine* ptrVM;
 extern JIT* currentJIT;
 extern unsigned long arrayAddress;
 
+void VirtualMachine::callMethod (vector<VariableDescriptor*>* vectorArgs, ClassInfo *classInfo,
+                                 MethodInfo *methodInfo)
+{
+    unsigned long *prev = ptrVM->getCurrentJIT ()->getStackPointerMem ();
+    JIT* jit = ptrVM->pushJIT ();
+    jit->runMethodCode (vectorArgs, methodInfo->getCode (), prev);
+    ptrVM->popJIT ();
+    delete jit;
+    
+    for (int i = 0; i < vectorArgs->size (); i++)
+    {
+        delete vectorArgs [0][i];
+    }
+    
+    delete vectorArgs;
+}
+
+MethodInfo *VirtualMachine::getMethodInfoOfClass (string cname, string mname)
+{
+    ClassInfo *classInfo = getClassInfoForName (cname);
+    
+    for (int i = 0; i < classInfo->totalMethods (); i++)
+    {
+        if (classInfo->getMethodInfo (i)->getName () == mname)
+        {
+            return classInfo->getMethodInfo (i);
+        }
+    }
+    
+    return LULL;
+}
+
 /* Returns the address of the allocated object */
 unsigned long VirtualMachine::allocateArray (char* type, int size)
 {
@@ -143,7 +175,7 @@ int VirtualMachine::start (string filename)
         //printf ("Names %s\n", vectorClassInfo[i]->getName().c_str());
         if (vectorClassInfo [i]->getName () == mainClass)
         {
-            for (int j = 0; j < vectorClassInfo [i]->totalMethods (); i++)
+            for (int j = 0; j < vectorClassInfo [i]->totalMethods (); j++)
             {
                 if (vectorClassInfo [i]->getMethodInfo (j)->getName () == mainFunction)
                 {
@@ -156,7 +188,8 @@ int VirtualMachine::start (string filename)
         }
     }
 
-    jit->runMethodCode (mainMethodInfo->getCode ());
+    stackJIT.push (jit);
+    jit->runMethodCode (new vector<VariableDescriptor*> (), mainMethodInfo->getCode (), NULL);
 }
 
 int VirtualMachine::read (const string filename)
@@ -271,8 +304,8 @@ int VirtualMachine::read (const string filename)
             while (k < n_params)
             {
                 int paramTypeLength = memblock [++memblockIter];
-                string paramType = read_string_from_byte_array (memblock + paramTypeLength, paramTypeLength);
-                paramTypeLength += paramTypeLength;
+                string paramType = read_string_from_byte_array (memblock + memblockIter, paramTypeLength);
+                memblockIter += paramTypeLength;
                 vectorParamTypes.insert (vectorParamTypes.end (), paramType);
                 k++;
             }
@@ -288,7 +321,7 @@ int VirtualMachine::read (const string filename)
                                                                   isLittleEndian);
                 memblockIter += 4;
                 typelength = memblock [++memblockIter];
-                type_name = read_string_from_byte_array (memblock + memblockIter, typelength);
+                string type_name = read_string_from_byte_array (memblock + memblockIter, typelength);
                 memblockIter += typelength;
                 int local_size = convert_byte_array_to_integer (memblock + memblockIter + 1,
                                                                 isLittleEndian);
@@ -340,6 +373,7 @@ int VirtualMachine::read (const string filename)
                                      (new MethodInfo (membername, type_name, (bool)(firstinfo >> 2),
                                       (AccessSpecifier)(firstinfo - ((firstinfo >> 2) << 2)),
                                        vectorParamTypes, methodCode)));
+            
             j++;
         }
         

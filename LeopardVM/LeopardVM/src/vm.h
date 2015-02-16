@@ -117,9 +117,31 @@ class VirtualMachine
         
         static unsigned long allocateArray (char* type, int size);
         static unsigned long allocateObject (char *type);
+        static void callMethod (vector<VariableDescriptor*>* vectorVarDesc, ClassInfo *classInfo, MethodInfo *methodInfo);
         ClassInfo *getClassInfoForName (string name);
         AllocatedObject *getAllocatedObjectForStartPos (unsigned long startPos);
         unsigned int getPosForField (string cname, string fname, string* type);
+        MethodInfo *getMethodInfoOfClass (string cname, string mname);
+        
+        JIT *getCurrentJIT ()
+        {
+            return jit;
+        }
+
+        JIT *pushJIT ()
+        {
+            jit = new JIT ();
+            stackJIT.push (jit);
+            return jit;
+        }
+    
+        JIT *popJIT ()
+        {
+            JIT* jit2 = stackJIT.top ();
+            stackJIT.pop ();
+            jit = stackJIT.top ();
+            return jit2;
+        }
 
     private:
         bool isLittleEndian;
@@ -127,6 +149,7 @@ class VirtualMachine
         string mainClass;
         vector<ClassInfo*> vectorClassInfo;
         map<unsigned long, AllocatedObject*> mapAllocatedObject; 
+        stack<JIT*> stackJIT;
         JIT* jit;
         HeapAllocator* heapAllocator;
         

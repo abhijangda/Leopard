@@ -146,8 +146,36 @@ unsigned int VirtualMachine::getPosForField (string cname, string fname, string*
     ClassInfo *classInfo;
     int size;
     unsigned pos = 0;
+    ClassInfo* _classInfo;
 
     classInfo = getClassInfoForName (cname);
+    
+    /* Field could be in a parent class. Find the class containing field */
+    while (classInfo != LULL)
+    {
+        bool toBreak = false;
+
+        for (int i = 0; i < classInfo->totalMembers (); i++)
+        {
+            if (classInfo->getMemberInfo (i)->getName () == fname)
+            {
+                toBreak = true;
+                break;
+            }
+        }
+
+        if (toBreak)
+        {
+            break;
+        }
+
+        classInfo = classInfo->getParentClassInfo ();
+    }
+    
+    if (classInfo->getParentClassInfo ())
+    {
+        pos = classInfo->getSize ();
+    }
 
     for (int i = 0; i < classInfo->totalMembers (); i++)
     {

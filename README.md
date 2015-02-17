@@ -22,4 +22,4 @@ To compile Compiler run following command:
 Current Status:
 * Compiler is completed. It gives the VM's bytecode instructions for a given output. Semantic Analysis and Error Reporting needs to be improved.
 * Assembler is completed.
-* Virtual Machine is in process.
+* Virtual Machine is currently in progress. Support for Reflection and Garbage Collector needs to be added.

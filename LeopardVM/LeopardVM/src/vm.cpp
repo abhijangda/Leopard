@@ -14,17 +14,86 @@ extern unsigned long arrayAddress;
 void VirtualMachine::callMethod (vector<VariableDescriptor*>* vectorArgs, ClassInfo *classInfo,
                                  MethodInfo *methodInfo)
 {
-    unsigned long *prev = ptrVM->getCurrentJIT ()->getStackPointerMem ();
-    JIT* jit = ptrVM->pushJIT ();
+    unsigned long* prev = ptrVM->getCurrentJIT ()->getStackPointerMem ();
+    unsigned long* objectAddress = ptrVM->getcalledObjectAddressMem ();
+    AllocatedObject *allocObj;
+    ClassInfo *allocObjClassInfo;
+    JIT* jit;
+
+    /* We need to find two things here:
+       1. Find the virtual method
+       2. Find the parent class method
+
+    Check if the allocObj's Class is same as the supplied class
+    If yes then this class is the required class and the method
+        is the required method
+    If no then if allocObjClassInfo is the subclass of the classInfo then
+        There is either a virtual method call or a inherited method call.
+        But inherited method call has been resolved earlier.
+        Else Error
+    */
+    allocObj = ptrVM->mapAllocatedObject [*objectAddress];
+    allocObjClassInfo = allocObj->getClassInfo ();
+    
+    if (classInfo != allocObjClassInfo)
+    {
+        ClassInfo* _classInfo;
+        
+        _classInfo = allocObjClassInfo->getParentClassInfo ();
+
+        while (_classInfo != LULL && (_classInfo != classInfo))
+        {
+            _classInfo = _classInfo->getParentClassInfo ();
+        }
+    
+        if (_classInfo == LULL)
+        {
+            /* ERROR: Invalid Class Name supplied */
+        }
+        else
+        {
+            /* As classInfo is parent of allocObjClassInfo, so the call is virtual */
+            /* Go up the parents of the allocObjClassInfo and search for the same 
+             * method name 
+             */
+            
+            _classInfo = allocObjClassInfo;
+
+            while (_classInfo != LULL)
+            {
+                bool toBreak = false;
+
+                for (int i = 0; i < _classInfo->totalMethods (); i++)
+                {
+                    if (_classInfo->getMethodInfo (i)->getName () ==
+                        methodInfo->getName ())
+                    {
+                        methodInfo = _classInfo->getMethodInfo (i);
+                        toBreak = true;
+                        break;
+                    }
+                }
+
+                if (toBreak)
+                {
+                    break;
+                }
+
+                _classInfo = _classInfo->getParentClassInfo ();
+            }
+        }
+    }
+
+    jit = ptrVM->pushJIT ();
     jit->runMethodCode (vectorArgs, methodInfo->getCode (), prev);
     ptrVM->popJIT ();
     delete jit;
-    
+
     for (int i = 0; i < vectorArgs->size (); i++)
     {
         delete vectorArgs [0][i];
     }
-    
+
     delete vectorArgs;
 }
 
@@ -32,12 +101,17 @@ MethodInfo *VirtualMachine::getMethodInfoOfClass (string cname, string mname)
 {
     ClassInfo *classInfo = getClassInfoForName (cname);
     
-    for (int i = 0; i < classInfo->totalMethods (); i++)
+    while (classInfo)
     {
-        if (classInfo->getMethodInfo (i)->getName () == mname)
+        for (int i = 0; i < classInfo->totalMethods (); i++)
         {
-            return classInfo->getMethodInfo (i);
+            if (classInfo->getMethodInfo (i)->getName () == mname)
+            {
+                return classInfo->getMethodInfo (i);
+            }
         }
+        
+        classInfo = classInfo->getParentClassInfo ();
     }
     
     return LULL;
@@ -245,6 +319,7 @@ int VirtualMachine::read (const string filename)
         int classSize = 0;
         string className = "";
         string parentName = "";
+        ClassInfo* parent = LULL;
         int n_members, n_methods;
         vector<MemberInfo*> vectorMemberInfo;
         vector<MethodInfo*> vectorMethodInfo;
@@ -376,9 +451,23 @@ int VirtualMachine::read (const string filename)
             
             j++;
         }
-        
-        vectorClassInfo.insert (vectorClassInfo.end (), new ClassInfo (className, classSize, parentName, 
+
+        if (parentName != "None")
+        {
+            parent = getClassInfoForName (parentName);
+        }
+        else
+        {
+            parent = LULL;
+        }
+
+        vectorClassInfo.insert (vectorClassInfo.end (), new ClassInfo (className, classSize, parent, 
                                                                        vectorMemberInfo, vectorMethodInfo));
+        if (parent != LULL)
+        {
+            parent->addChildClass (vectorClassInfo [vectorClassInfo.size () - 1]);
+        }
+
         i++;
     }
     

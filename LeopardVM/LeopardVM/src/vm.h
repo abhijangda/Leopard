@@ -75,7 +75,7 @@ class AllocatedObject
     public:
         AllocatedObject (ClassInfo *_classInfo, MemoryBlock* _memBlock)
         {
-            classInfo = classInfo;
+            classInfo = _classInfo;
             memBlock = _memBlock;
         }
 
@@ -92,6 +92,11 @@ class AllocatedObject
         MemoryBlock* getMemBlock () const
         {
             return memBlock;
+        }
+    
+        ClassInfo* getClassInfo ()
+        {
+            return classInfo;
         }
 
     private:
@@ -143,6 +148,11 @@ class VirtualMachine
             return jit2;
         }
 
+        unsigned long *getcalledObjectAddressMem ()
+        {
+            return &calledObjectAddressMem;
+        }
+
     private:
         bool isLittleEndian;
         string mainFunction;
@@ -152,6 +162,7 @@ class VirtualMachine
         stack<JIT*> stackJIT;
         JIT* jit;
         HeapAllocator* heapAllocator;
+        unsigned long calledObjectAddressMem;
         
         int read (const string filename);
         int getSizeForType (char *type);

@@ -1081,27 +1081,24 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
 
             for (int i = 0; i < methodInfo->getParamCount (); i++)
             {
-                vectorArgs[0][methodInfo->getParamCount () - i - 1] = VariableDescriptor::copyVarDesc (varStack->top ());
+                VariableDescriptor *desc = VariableDescriptor::copyVarDesc (varStack->top ());
+                vectorArgs[0][methodInfo->getParamCount () - i - 1] = desc;
                 varStack->pop ();
             }
 
             if (!methodInfo->getIsStatic ())
             {
-                vectorArgs[0].insert (vectorArgs->begin (), VariableDescriptor::copyVarDesc (varStack->top ()));
+                vectorArgs[0].insert (vectorArgs->begin (), 
+                                      VariableDescriptor::copyVarDesc (varStack->top ()));
                 varStack->pop ();
+                jit_ldxi (JIT_R0, JIT_FP, vectorArgs[0][0]->getMemLoc ());
+                jit_sti ((jit_pointer_t)ptrVM->getcalledObjectAddressMem (), JIT_R0);
             }
-
-            //jit_pushargi((jit_word_t)" %ld lfdfgdfgl\n");
-            //jit_ellipsis();
-            //printf ("TOP %d \n", vectorTempDescriptors [vectorTempDescriptors.size () - 1]->getCurrLocation ().getValue ());
-            //jit_pushargr(vectorTempDescriptors [vectorTempDescriptors.size () - 1]->getCurrLocation ().getValue ());
-            //jit_pushargr );
-            //jit_pushargr(vectorArgs[0][0]->getCurrLocation ().getValue ());
-            //jit_pushargr(vectorLocalDescriptors [0]->getCurrLocation ().getValue ());
-            //jit_movi_d (JIT_F1, 9.60);
-            //jit_pushargr_d (JIT_F0);
-            //jit_pushargr (JIT_V2);
-            //jit_finishi((jit_pointer_t)printf);
+            else
+            {
+                jit_movi (JIT_R0, 0);
+                jit_sti ((jit_pointer_t)ptrVM->getcalledObjectAddressMem (), JIT_R0);
+            }
     
             jit_pushargi ((jit_word_t)vectorArgs);
             jit_pushargi ((jit_word_t)classInfo);
@@ -1584,7 +1581,7 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             tempDesc = createTempDescriptor (8, Reference, 
                                              "", code->getInstruction(i)->getOp ());
             vectorIntRegisters [0]->assignVariable (tempDesc);
-            
+
             varStack->push (tempDesc);
             continue;
         }

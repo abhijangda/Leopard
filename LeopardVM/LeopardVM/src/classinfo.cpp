@@ -56,7 +56,7 @@ void MethodInfo::addParamType (string type)
     vectorParamTypes.insert (vectorParamTypes.end (), type);
 }
             
-ClassInfo::ClassInfo (string _name, int _size, string _parent, vector <MemberInfo*> vMemInfo, 
+ClassInfo::ClassInfo (string _name, int _size, ClassInfo *_parent, vector <MemberInfo*> vMemInfo, 
                       vector <MethodInfo*> vMethInfo) :
     vectorMethods (), vectorMembers ()
 {

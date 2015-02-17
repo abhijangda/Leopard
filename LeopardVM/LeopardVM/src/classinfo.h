@@ -185,6 +185,7 @@ class MethodInfo : public MemberInfo
         {
             return vectorParamTypes.size ();
         }
+
         MethodCode *getCode ()
         {
             return code;
@@ -196,16 +197,23 @@ class ClassInfo
     private:
         string name;
         int size;
-        string parent;
         int n_members;
         int n_methods;
         vector <MemberInfo*> vectorMembers;
         vector <MethodInfo*> vectorMethods;
+        vector <ClassInfo*> listChildren;
+        ClassInfo* parent;
+        
     
     public:
-        ClassInfo (string _name, int _size, string _parent, vector <MemberInfo*> vMemInfo, 
+        ClassInfo (string _name, int _size, ClassInfo* _parent, vector <MemberInfo*> vMemInfo,
                    vector <MethodInfo*> vMethInfo);
         
+        void addChildClass (ClassInfo* child)
+        {
+            listChildren.push_back (child);
+        }
+
         string getName ()
         {
             return name;
@@ -213,9 +221,14 @@ class ClassInfo
         
         string getParent ()
         {
-            return parent;
+            return parent->getName ();
         }
     
+        ClassInfo* getParentClassInfo ()
+        {
+            return parent;
+        }
+
         int getSize ()
         {
             return size;

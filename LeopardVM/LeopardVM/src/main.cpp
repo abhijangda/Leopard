@@ -15,11 +15,11 @@ int main (int argc, char *argv[])
     }
 
     char *filename = argv[1];
-    VirtualMachine vm;
-    ptrVM = &vm;
+    //VirtualMachine vm;
+    ptrVM = new VirtualMachine ();
     string s (filename);
     init_jit(argv[0]);
-    vm.start (s);
+    ptrVM->start (s);
     
     return 0;
 }

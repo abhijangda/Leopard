@@ -762,7 +762,6 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             /* push.i */
             processPushInstr (sizeof (int), Integer,
                               code->getInstruction (i)->getOp ());
-            //printf ("TO REG %d value %s\n",varStack->top()->getCurrLocation ().getValue (), code->getInstruction (i)->getOp ().c_str ());
             continue;
         }
         L6:
@@ -1685,7 +1684,8 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             string instr;
             string className;
             string fieldName;
-            string fieldType;
+            MemberInfo *info;
+
             size_t pos;
             OperatorType optype;
             
@@ -1694,33 +1694,48 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             className = instr.substr (0, pos);
             fieldName = instr.substr (pos + 1, instr.length () - pos - 1);            
             
-            varDesc = varStack->top ();
-            varStack->pop ();
-            
-            pos = ptrVM->getPosForField (className, fieldName, &fieldType);
-            optype = getOperatorTypeFromString (fieldType);
+            pos = ptrVM->getPosForField (className, fieldName, &info);
+            optype = getOperatorTypeFromString (info->getType());
             tempDesc = createTempDescriptor (getSizeFromOperatorType (optype),
-                                             optype, "", fieldType);
-            tempDesc1 = createTempDescriptor (8, Long);
+                                             optype, "", info->getType());
             allocateRegister (tempDesc);
-            allocateRegister (tempDesc1);
 
-            if (allocateRegister (varDesc) &&
-                dynamic_cast <TempDescriptor*> (varDesc) != LULL)
+            if (!info->getIsStatic ())
             {
-                jitStack->copyMemToReg (_jit, varDesc->getMemLoc (),
-                                        varDesc->getCurrLocation ().getValue (),
-                                        getOperatorTypeFromString (varDesc->getType ()));
+                /* If the member is not static only then pop the stack to get 
+                 * the address of object */
+                varDesc = varStack->top ();
+                varStack->pop ();
+            
+                tempDesc1 = createTempDescriptor (8, Long);
+                allocateRegister (tempDesc1);
+    
+                if (allocateRegister (varDesc) &&
+                    dynamic_cast <TempDescriptor*> (varDesc) != LULL)
+                {
+                    jitStack->copyMemToReg (_jit, varDesc->getMemLoc (),
+                                            varDesc->getCurrLocation ().getValue (),
+                                            getOperatorTypeFromString (varDesc->getType ()));
+                }
+    
+                jit_addi (tempDesc1->getCurrLocation().getValue (),
+                          varDesc->getCurrLocation ().getValue(),
+                          pos);
+                jitStack->copyMemrToReg (_jit, tempDesc1->getCurrLocation ().getValue (),
+                                         tempDesc->getCurrLocation ().getValue (),
+                                         optype);
+                varStack->push (tempDesc);
+                delete tempDesc1;
+            }
+            else
+            {
+                /* But if it is static then do not pop the object */
+                jitStack->copyMemiToReg (_jit, pos,
+                                         tempDesc->getCurrLocation ().getValue (),
+                                         optype);
+                varStack->push (tempDesc);
             }
 
-            jit_addi (tempDesc1->getCurrLocation().getValue (),
-                      varDesc->getCurrLocation ().getValue(),
-                      pos);
-            jitStack->copyMemrToReg (_jit, tempDesc1->getCurrLocation ().getValue (),
-                                     tempDesc->getCurrLocation ().getValue (),
-                                     optype);
-            varStack->push (tempDesc);
-            delete tempDesc1;
             continue;
         }
  
@@ -1733,33 +1748,18 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             string instr;
             string className;
             string fieldName;
-            string fieldType;
+            MemberInfo* info;
             size_t pos;
+
             OperatorType optype;
             
             instr = code->getInstruction (i)->getOp ();
             pos = instr.find (".");
             className = instr.substr (0, pos);
-            fieldName = instr.substr (pos + 1, instr.length () - pos - 1);            
-            
-            varDesc = varStack->top ();
-            varStack->pop ();
+            fieldName = instr.substr (pos + 1, instr.length () - pos - 1);           
             
             valueDesc = varStack->top ();
             varStack->pop ();
-            
-            pos = ptrVM->getPosForField (className, fieldName, &fieldType);
-            optype = getOperatorTypeFromString (fieldType);
-            tempDesc1 = createTempDescriptor (8, Long);
-            allocateRegister (tempDesc1);
-
-            if (allocateRegister (varDesc) &&
-                dynamic_cast <TempDescriptor*> (varDesc) != LULL)
-            {
-                jitStack->copyMemToReg (_jit, varDesc->getMemLoc (),
-                                        varDesc->getCurrLocation ().getValue (),
-                                        getOperatorTypeFromString (varDesc->getType ()));
-            }
 
             if (allocateRegister (valueDesc) &&
                 dynamic_cast <TempDescriptor*> (valueDesc) != LULL)
@@ -1768,14 +1768,40 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
                                         valueDesc->getCurrLocation ().getValue (),
                                         getOperatorTypeFromString (valueDesc->getType ()));
             }
+            
+            pos = ptrVM->getPosForField (className, fieldName, &info);
+            optype = getOperatorTypeFromString (info->getType ());
+            tempDesc1 = createTempDescriptor (8, Long);
+            allocateRegister (tempDesc1);
+            
+            if (info->getIsStatic ())
+            {
+                /* But if it is static then do not pop the object */
+                jitStack->copyRegToMemi (_jit, pos,
+                                         valueDesc->getCurrLocation ().getValue (),
+                                         optype);
+            }
+            else
+            {
+                varDesc = varStack->top ();
+                varStack->pop ();            
 
-            jit_addi (tempDesc1->getCurrLocation().getValue (),
-                      varDesc->getCurrLocation ().getValue(),
-                      pos);
-            jitStack->copyRegToMemr (_jit, tempDesc1->getCurrLocation ().getValue (),
-                                     valueDesc->getCurrLocation ().getValue (),
-                                     optype);
-            delete tempDesc1;
+                if (allocateRegister (varDesc) &&
+                    dynamic_cast <TempDescriptor*> (varDesc) != LULL)
+                {
+                    jitStack->copyMemToReg (_jit, varDesc->getMemLoc (),
+                                            varDesc->getCurrLocation ().getValue (),
+                                            getOperatorTypeFromString (varDesc->getType ()));
+                }
+    
+                jit_addi (tempDesc1->getCurrLocation().getValue (),
+                          varDesc->getCurrLocation ().getValue(),
+                          pos);
+                jitStack->copyRegToMemr (_jit, tempDesc1->getCurrLocation ().getValue (),
+                                         valueDesc->getCurrLocation ().getValue (),
+                                         optype);
+                delete tempDesc1;
+            }
 
             continue;
         }

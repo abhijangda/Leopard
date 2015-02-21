@@ -89,7 +89,6 @@ void VirtualMachine::callMethod (vector<VariableDescriptor*>* vectorArgs, ClassI
     ptrVM->popJIT ();
     delete jit;
 
-    printf ("RETURN %ld\n", *(ptrVM->getReturnValueMem ()));
     for (int i = 0; i < vectorArgs->size (); i++)
     {
         delete vectorArgs [0][i];
@@ -133,7 +132,7 @@ unsigned long VirtualMachine::allocateArray (char* type, int size)
     
     MemoryBlock *memBlock = ptrVM->getHeapAllocator ()->allocate (opsize*size);
     arrayAddress = memBlock->getStartPos();
-
+    
     return memBlock->getStartPos ();
 }
 
@@ -142,11 +141,11 @@ AllocatedObject *VirtualMachine::getAllocatedObjectForStartPos (unsigned long st
     return mapAllocatedObject [startPos];
 }
 
-unsigned int VirtualMachine::getPosForField (string cname, string fname, string* type)
+unsigned int VirtualMachine::getPosForField (string cname, string fname, MemberInfo** type)
 {
     ClassInfo *classInfo;
     int size;
-    unsigned pos = 0;
+    unsigned long pos = 0;
     ClassInfo* _classInfo;
 
     classInfo = getClassInfoForName (cname);
@@ -160,6 +159,11 @@ unsigned int VirtualMachine::getPosForField (string cname, string fname, string*
         {
             if (classInfo->getMemberInfo (i)->getName () == fname)
             {
+                if (type)
+                {
+                    *type = classInfo->getMemberInfo (i);
+                }
+
                 toBreak = true;
                 break;
             }
@@ -172,21 +176,21 @@ unsigned int VirtualMachine::getPosForField (string cname, string fname, string*
 
         classInfo = classInfo->getParentClassInfo ();
     }
-    
+
     if (classInfo->getParentClassInfo ())
     {
         pos = classInfo->getSize ();
+    }
+
+    if ((*type)->getIsStatic () == true)
+    {
+        return ptrVM->getAllocObjForStaticMember (*type)->getMemBlock ()->getStartPos ();
     }
 
     for (int i = 0; i < classInfo->totalMembers (); i++)
     {
         if (classInfo->getMemberInfo (i)->getName () == fname)
         {
-            if (type)
-            {
-                *type = classInfo->getMemberInfo (i)->getType ();
-            }
-
             break;
         }
         
@@ -238,6 +242,8 @@ AllocatedObject* VirtualMachine::_allocateObject (string type)
     
         pos += getSizeFromOperatorType (opTypeChild);
     }
+
+    ptrVM->getGarbageCollector ()->pushObject (allocatedObject);
 
     return allocatedObject;
 }
@@ -291,8 +297,46 @@ int VirtualMachine::start (string filename)
         }
     }
 
+    /* Initialize and allocate storage to the static members of all classes */
+    for (int i = 0; i < vectorClassInfo.size (); i++)
+    {
+        for (int j = 0; j < vectorClassInfo[i]->totalMembers (); j++)
+        {
+            if (vectorClassInfo[i]->getMemberInfo (j)->getIsStatic ())
+            {
+                vectorStaticMembers.push_back (vectorClassInfo[i]->getMemberInfo (j));
+                allocateStaticMember (vectorClassInfo[i], 
+                                      vectorClassInfo[i]->getMemberInfo (j));
+            }
+        }
+    }
+
     stackJIT.push (jit);
     jit->runMethodCode (new vector<VariableDescriptor*> (), mainMethodInfo->getCode (), NULL);
+}
+
+AllocatedObject* VirtualMachine::allocateStaticMember (ClassInfo *classInfo, 
+                                                       MemberInfo *memberInfo)
+{
+    /* Allocate the static member */
+
+    string type = memberInfo->getType ();
+    OperatorType optype = getOperatorTypeFromString (type);
+    int size = getSizeFromOperatorType (optype);
+    MemoryBlock *memBlock;
+    AllocatedObject *allocatedObject;
+
+    memBlock = getHeapAllocator ()->allocate (size);
+    allocatedObject = new AllocatedObject (classInfo, memBlock);
+    /* Store the allocated objects according to their start positions, keys */
+    mapStaticMembersAllocated [memberInfo] = allocatedObject;
+    
+    if (optype != Reference)
+    {
+        return allocatedObject;
+    }
+    
+    return LULL;
 }
 
 int VirtualMachine::read (const string filename)
@@ -381,7 +425,7 @@ int VirtualMachine::read (const string filename)
             string membername = read_string_from_byte_array (memblock + memblockIter, membernamelen);
             memblockIter += membernamelen;
             vectorMemberInfo.insert (vectorMemberInfo.end (), (new MemberInfo (membername, type_name, 
-                                                                (bool)(firstinfo >> 2), 
+                                                                (bool)(firstinfo & 0x1), 
                                                                 (AccessSpecifier)(firstinfo - ((firstinfo >> 2) << 2)))));
             j++;
         }

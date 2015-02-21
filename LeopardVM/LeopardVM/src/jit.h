@@ -47,6 +47,7 @@ class JITStack
         void stackPop (jit_state* _jit, int reg, OperatorType type);
         int allocateStack (jit_state* _jit, int size);
         void copyMemToReg (jit_state* _jit, int loc, int reg, OperatorType type);
+        void copyMemiToReg (jit_state* _jit, unsigned long loc, int reg, OperatorType type);
         void copyMemrToReg (jit_state* _jit, int loc, int reg, OperatorType type);
         void copyMemxrToReg (jit_state* _jit, int loc, int loc2, int reg, OperatorType type);
         void copyMemxiToReg (jit_state* _jit, int locreg, int loc, int reg, OperatorType type);
@@ -54,6 +55,7 @@ class JITStack
         void copyRegToMem (jit_state* _jit, int loc, int reg, OperatorType type);
         void copyRegToMemxr (jit_state* _jit, int loc, int reg, OperatorType type);
         void copyRegToMemr (jit_state* _jit, int loc, int reg, OperatorType type);
+        void copyRegToMemi (jit_state* _jit, unsigned long loc, int reg, OperatorType type);
 
         int getPointer () 
         {

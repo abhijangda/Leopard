@@ -1,0 +1,1 @@
+src/LeopardVM-memberinfo.o: src/memberinfo.cpp

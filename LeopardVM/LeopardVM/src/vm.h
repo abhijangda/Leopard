@@ -7,44 +7,14 @@
 #include "classinfo.h"
 #include "main.h"
 #include "jit.h"
+#include "allocatedObject.h"
+#include "gc.h"
 
 #ifndef __VM_H__
 #define __VM_H__
 
 using namespace std;
 
-class MemoryBlock
-{
-    private:
-        unsigned long size; //Size is in Bytes
-        unsigned long startPos;
-        byte *memory;
-    
-    public:
-        MemoryBlock (unsigned long size, unsigned long startPos, byte *memory)
-        {
-            this->size = size;
-            this->startPos = startPos;
-            this->memory = memory;
-        }
-    
-        MemoryBlock (unsigned long size)
-        {
-            this->memory = new byte[size];
-            this->size = size;
-            this->startPos = (unsigned long)this->memory;
-        }
-        
-        unsigned long getStartPos ()
-        {
-            return startPos;
-        }
-    
-        byte *getMemory ()
-        {
-            return memory;
-        }
-};
 
 class ReferenceVariable
 {
@@ -70,41 +40,6 @@ class HeapAllocator
         MemoryBlock *allocate (unsigned long size);
 };
 
-class AllocatedObject
-{
-    public:
-        AllocatedObject (ClassInfo *_classInfo, MemoryBlock* _memBlock)
-        {
-            classInfo = _classInfo;
-            memBlock = _memBlock;
-        }
-
-        void addChild (AllocatedObject *child)
-        {
-            listChildren.insert (listChildren.end (), child);
-        }
-        
-        AllocatedObject* getChild (int i)
-        {
-            return listChildren[i];
-        }
-    
-        MemoryBlock* getMemBlock () const
-        {
-            return memBlock;
-        }
-    
-        ClassInfo* getClassInfo ()
-        {
-            return classInfo;
-        }
-
-    private:
-        ClassInfo *classInfo;
-        vector<AllocatedObject*> listChildren;
-        MemoryBlock *memBlock;
-};
-
 class VirtualMachine 
 {
     public:
@@ -125,7 +60,7 @@ class VirtualMachine
         static void callMethod (vector<VariableDescriptor*>* vectorVarDesc, ClassInfo *classInfo, MethodInfo *methodInfo);
         ClassInfo *getClassInfoForName (string name);
         AllocatedObject *getAllocatedObjectForStartPos (unsigned long startPos);
-        unsigned int getPosForField (string cname, string fname, string* type);
+        unsigned int getPosForField (string cname, string fname, MemberInfo** type);
         MethodInfo *getMethodInfoOfClass (string cname, string mname);
         
         JIT *getCurrentJIT ()
@@ -158,21 +93,39 @@ class VirtualMachine
             return &returnValueMem;
         }
 
+        AllocatedObject* getAllocObjForStaticMember (MemberInfo *meminfo)
+        {
+            return mapStaticMembersAllocated.at (meminfo);
+        }
+
+        GarbageCollector* getGarbageCollector ()
+        {
+            return &gc;
+        }
+
+        vector<AllocatedObject>* getRootSet ();
+
     private:
         bool isLittleEndian;
         string mainFunction;
         string mainClass;
         vector<ClassInfo*> vectorClassInfo;
-        map<unsigned long, AllocatedObject*> mapAllocatedObject; 
+        map<unsigned long, AllocatedObject*> mapAllocatedObject;
+        map<MemberInfo*, AllocatedObject*> mapStaticMembersAllocated;
+        vector<MemberInfo*> vectorStaticMembers;
         stack<JIT*> stackJIT;
         JIT* jit;
         HeapAllocator* heapAllocator;
         unsigned long calledObjectAddressMem;
         unsigned long returnValueMem;
+        GarbageCollector gc;
+        vector<AllocatedObject> rootSet;
         
         int read (const string filename);
         int getSizeForType (char *type);
         AllocatedObject* _allocateObject (string type);
+        AllocatedObject* allocateStaticMember (ClassInfo *classInfo, 
+                                               MemberInfo *memberInfo);
 };
 
 #endif /* __VM_H__ */

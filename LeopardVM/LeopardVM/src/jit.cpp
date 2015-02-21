@@ -1105,7 +1105,30 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             jit_pushargi ((jit_word_t)methodInfo);
             jit_finishi ((jit_pointer_t)VirtualMachine::callMethod);
 
-            restoreVariablesFromMemory ();
+            if (methodInfo->getType () != "void")
+            {
+                /* If the type of return value is not void then 
+                 * that value is stored in the JIT_R0 register. 
+                 */
+                OperatorType optype = getOperatorTypeFromString (methodInfo->getType ());
+                TempDescriptor *tempDesc;
+
+                tempDesc = createTempDescriptor (getSizeFromOperatorType (optype), optype, "", 
+                                                 methodInfo->getType ());
+                tempDesc->setMemLocation ((unsigned long)ptrVM->getReturnValueMem ());
+                restoreVariablesFromMemory ();
+                allocateRegister (tempDesc);
+                /* Copy the return value from return val memory to the register. 
+                 * We would have to copy the value as long,
+                 * as the memory is of long type */
+                jit_ldi_l (tempDesc->getCurrLocation ().getValue (), 
+                         (jit_pointer_t)tempDesc->getMemLoc ());
+                varStack->push (tempDesc);
+            }
+            else
+            {
+                restoreVariablesFromMemory ();
+            }            
 
             continue;
         }
@@ -1588,13 +1611,29 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
  
         L60:
         {
-            // push.str
+            //returnval
+            
+            VariableDescriptor *returnDesc = varStack->top ();
+            varStack->pop ();
+            
+            if (allocateRegister (returnDesc) &&
+                dynamic_cast <TempDescriptor*> (returnDesc) != LULL)
+            {
+                jitStack->copyMemToReg (_jit, returnDesc->getMemLoc (),
+                                        returnDesc->getCurrLocation ().getValue (),
+                                        getOperatorTypeFromString (returnDesc->getType ()));
+            }
+        
+            /* Copy the return value to VM's returnValMem */
+            jit_sti_l (ptrVM->getReturnValueMem (), 
+                       returnDesc->getCurrLocation ().getValue ());
             continue;
         }
  
         L61:
         {
-            // push.str
+            // return
+            jit_ret();
             continue;
         }
  

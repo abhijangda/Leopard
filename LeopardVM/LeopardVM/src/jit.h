@@ -133,7 +133,7 @@ class VariableDescriptor
 {
     private:
         int size;
-        long memLocation;
+        unsigned long memLocation;
         VarType type;
         CurrentLocation currLoc;
     
@@ -162,7 +162,7 @@ class VariableDescriptor
             currLoc.set (type, value);
         }
     
-        void setMemLocation (long memLoc)
+        void setMemLocation (unsigned long memLoc)
         {
             memLocation = memLoc;
         }

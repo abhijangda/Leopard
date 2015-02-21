@@ -89,6 +89,7 @@ void VirtualMachine::callMethod (vector<VariableDescriptor*>* vectorArgs, ClassI
     ptrVM->popJIT ();
     delete jit;
 
+    printf ("RETURN %ld\n", *(ptrVM->getReturnValueMem ()));
     for (int i = 0; i < vectorArgs->size (); i++)
     {
         delete vectorArgs [0][i];

@@ -152,6 +152,11 @@ class VirtualMachine
         {
             return &calledObjectAddressMem;
         }
+    
+        unsigned long *getReturnValueMem ()
+        {
+            return &returnValueMem;
+        }
 
     private:
         bool isLittleEndian;
@@ -163,6 +168,7 @@ class VirtualMachine
         JIT* jit;
         HeapAllocator* heapAllocator;
         unsigned long calledObjectAddressMem;
+        unsigned long returnValueMem;
         
         int read (const string filename);
         int getSizeForType (char *type);

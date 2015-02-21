@@ -1,1 +1,0 @@
-src/LeopardVM-methodinfo.o: src/methodinfo.cpp

@@ -4,7 +4,7 @@
     <Files>
       <File FileName="VMAssembler/Main.cs" Line="1" Column="1" />
       <File FileName="VMAssembler/ClassInfo.cs" Line="1" Column="1" />
-      <File FileName="Compiler/Program.cs" Line="47" Column="34" />
+      <File FileName="Compiler/Program.cs" Line="47" Column="5" />
       <File FileName="Compiler/CodeGenerator.cs" Line="1" Column="1" />
     </Files>
   </MonoDevelop.Ide.Workbench>

@@ -42,14 +42,51 @@ class MemoryBlock
         }
 };
 
+class AllocatedVariable
+{
+    private:
+        MemoryBlock *memBlock;
+    
+    protected:
+        AllocatedVariable (MemoryBlock *memBlock)
+        {
+            this->memBlock = memBlock;
+        }
 
-class AllocatedObject
+    public:
+        virtual string getType () = 0;
+
+        MemoryBlock* getMemBlock () const
+        {
+            return memBlock;
+        }
+};
+
+class AllocatedPrimitive : public AllocatedVariable
+{
+    private:
+        string type;
+
+    public:
+        AllocatedPrimitive (string _type, MemoryBlock* _memBlock) :
+            AllocatedVariable (_memBlock)
+        {
+            type = _type;
+        }
+    
+        string getType ()
+        {
+            return type;
+        }
+};
+
+class AllocatedObject : public AllocatedVariable
 {
     public:
-        AllocatedObject (ClassInfo *_classInfo, MemoryBlock* _memBlock)
+        AllocatedObject (ClassInfo *_classInfo, MemoryBlock* _memBlock) :
+            AllocatedVariable (_memBlock)
         {
             classInfo = _classInfo;
-            memBlock = _memBlock;
         }
 
         void addChild (AllocatedObject *child)
@@ -62,11 +99,11 @@ class AllocatedObject
             return listChildren[i];
         }
     
-        MemoryBlock* getMemBlock () const
+        string getType ()
         {
-            return memBlock;
+            return classInfo->getName ();
         }
-    
+
         ClassInfo* getClassInfo ()
         {
             return classInfo;
@@ -75,7 +112,6 @@ class AllocatedObject
     private:
         ClassInfo *classInfo;
         vector<AllocatedObject*> listChildren;
-        MemoryBlock *memBlock;
 };
 
 #endif /* __Allocated_Object_H__ */

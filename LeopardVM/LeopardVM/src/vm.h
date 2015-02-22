@@ -93,7 +93,7 @@ class VirtualMachine
             return &returnValueMem;
         }
 
-        AllocatedObject* getAllocObjForStaticMember (MemberInfo *meminfo)
+        AllocatedVariable* getAllocObjForStaticMember (MemberInfo *meminfo)
         {
             return mapStaticMembersAllocated.at (meminfo);
         }
@@ -103,7 +103,7 @@ class VirtualMachine
             return &gc;
         }
 
-        vector<AllocatedObject>* getRootSet ();
+        vector<AllocatedVariable *>* getRootSet ();
 
     private:
         bool isLittleEndian;
@@ -111,7 +111,7 @@ class VirtualMachine
         string mainClass;
         vector<ClassInfo*> vectorClassInfo;
         map<unsigned long, AllocatedObject*> mapAllocatedObject;
-        map<MemberInfo*, AllocatedObject*> mapStaticMembersAllocated;
+        map<MemberInfo*, AllocatedVariable*> mapStaticMembersAllocated;
         vector<MemberInfo*> vectorStaticMembers;
         stack<JIT*> stackJIT;
         JIT* jit;
@@ -119,12 +119,12 @@ class VirtualMachine
         unsigned long calledObjectAddressMem;
         unsigned long returnValueMem;
         GarbageCollector gc;
-        vector<AllocatedObject> rootSet;
+        vector<AllocatedVariable *> rootSet;
         
         int read (const string filename);
         int getSizeForType (char *type);
         AllocatedObject* _allocateObject (string type);
-        AllocatedObject* allocateStaticMember (ClassInfo *classInfo, 
+        AllocatedVariable* allocateStaticMember (ClassInfo *classInfo, 
                                                MemberInfo *memberInfo);
 };
 

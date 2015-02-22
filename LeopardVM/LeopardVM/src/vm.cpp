@@ -270,6 +270,11 @@ ClassInfo *VirtualMachine::getClassInfoForName (string name)
     return LULL;
 }
 
+vector<AllocatedVariable*>* VirtualMachine::getRootSet ()
+{
+    
+}
+
 int VirtualMachine::start (string filename)
 {
     /* Process file */
@@ -312,10 +317,11 @@ int VirtualMachine::start (string filename)
     }
 
     stackJIT.push (jit);
-    jit->runMethodCode (new vector<VariableDescriptor*> (), mainMethodInfo->getCode (), NULL);
+    jit->runMethodCode (new vector<VariableDescriptor*> (), 
+                        mainMethodInfo->getCode (), NULL);
 }
 
-AllocatedObject* VirtualMachine::allocateStaticMember (ClassInfo *classInfo, 
+AllocatedVariable* VirtualMachine::allocateStaticMember (ClassInfo *classInfo, 
                                                        MemberInfo *memberInfo)
 {
     /* Allocate the static member */
@@ -324,19 +330,28 @@ AllocatedObject* VirtualMachine::allocateStaticMember (ClassInfo *classInfo,
     OperatorType optype = getOperatorTypeFromString (type);
     int size = getSizeFromOperatorType (optype);
     MemoryBlock *memBlock;
-    AllocatedObject *allocatedObject;
 
-    memBlock = getHeapAllocator ()->allocate (size);
-    allocatedObject = new AllocatedObject (classInfo, memBlock);
-    /* Store the allocated objects according to their start positions, keys */
-    mapStaticMembersAllocated [memberInfo] = allocatedObject;
-    
-    if (optype != Reference)
+    if (optype == Reference)
     {
+        AllocatedObject *allocatedObject;
+
+        allocatedObject = _allocateObject (type);
+        /* Store the allocated objects according to their start positions, keys */
+        mapStaticMembersAllocated [memberInfo] = allocatedObject;
+
         return allocatedObject;
     }
-    
-    return LULL;
+    else
+    {
+        AllocatedPrimitive *allocatedObject;
+
+        memBlock = getHeapAllocator ()->allocate (size);
+        allocatedObject = new AllocatedPrimitive (type, memBlock);
+        /* Store the allocated objects according to their start positions, keys */
+        mapStaticMembersAllocated [memberInfo] = allocatedObject;
+        
+        return allocatedObject;
+    }
 }
 
 int VirtualMachine::read (const string filename)

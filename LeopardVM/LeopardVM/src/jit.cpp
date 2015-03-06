@@ -12,7 +12,7 @@
 #undef FLOAT_DEBUG
 #define ARITH_START_CODE 27
 #define ARITH_END_CODE 47
-/* TODO: Also add exceptions like Stack Underflow in stack::pop () and stack::top () */
+/* TODO: Also add exceptions like Stack Underflow in stack::pop_back () and stack::top () */
 /* TODO: There are different ways functions like "allocateArray" returns value for 
  * different architectures, Create cases to store the register value where 
  * functions value is returned. For different processors type 
@@ -174,6 +174,15 @@ void RegisterDescriptor::spill (jit_state *_jit, JITStack *jitStack)
         return;
     }
 
+    if (assignedVar->getMemLoc () == -1)
+    {
+        /* Allocate Memory if not allocated, Local Variable is 
+         * allocated memory always only a temporary variable is 
+         * required to allocate memory 
+         */
+        jitStack->allocateTemporary (_jit, dynamic_cast <TempDescriptor*> (assignedVar));
+    }
+
     jitStack->copyRegToMem (_jit, assignedVar->getMemLoc (), reg,
                             getOperatorTypeFromString (assignedVar->getType ()));
     assignedVar->setCurrLocation (MemoryLocation, assignedVar->getMemLoc ());
@@ -195,7 +204,7 @@ JIT::JIT ()
     vectorFloatRegisters.insert (vectorFloatRegisters.end (), new RegisterDescriptor (JIT_F4));
     vectorFloatRegisters.insert (vectorFloatRegisters.end (), new RegisterDescriptor (JIT_F5));
  
-    varStackStack.push (new stack<VariableDescriptor*> ());
+    varStackStack.push (new vector<VariableDescriptor*> ());
     varStack = varStackStack.top ();
     rootVarStack = varStack;
     
@@ -237,7 +246,7 @@ void JIT::allocateMemory (VariableDescriptor *varDesc)
         else
         {
             jit_movi_d (JIT_F0, FLOAT_DEFAULT_VALUE);
-            jitStack->stackPush (_jit, JIT_F0, type);
+            jitStack->stackPush(_jit, JIT_F0, type);
         }
     }
     else
@@ -302,7 +311,7 @@ bool JIT::allocateRegister (VariableDescriptor *varDesc)
         /* Every register is filled up, cannot find any register
          * Let us use register next to the last use register */
         /* Spill the register */
-        //printf ("ASSIGNED LASTREGUSED %d\n", lastRegUsed);
+        //printf ("ASSIGNED LASTREGUSED %d\n", intLastRegUsed);
         vectorIntRegisters [intLastRegUsed%vectorIntRegisters.size ()]->spill (_jit, jitStack);
         _allocateRegister (varDesc, vectorIntRegisters [intLastRegUsed%vectorIntRegisters.size ()]);
         intLastRegUsed++;
@@ -430,16 +439,16 @@ inline void JIT::processPushInstr (int size, OperatorType type, string op)
                     strtod (op.c_str (), NULL));
     }
 
-    varStack->push (tempDesc);
+    varStack->push_back (tempDesc);
 }
 
 void JIT::processArithInstr (jit_code_t code_i, jit_code_t code_f, jit_code_t code_d)
 {
     /* Initialization code for Arithmetic Insructions */
-    VariableDescriptor* tempDesc1 = varStack->top ();
-    varStack->pop ();
-    VariableDescriptor* tempDesc2 = varStack->top ();
-    varStack->pop ();
+    VariableDescriptor* tempDesc1 = varStack->back ();
+    varStack->pop_back ();
+    VariableDescriptor* tempDesc2 = varStack->back ();
+    varStack->pop_back ();
  
     if (allocateRegister (tempDesc1) &&
         dynamic_cast <VariableDescriptor*> (tempDesc1) != null)
@@ -484,21 +493,18 @@ void JIT::processArithInstr (jit_code_t code_i, jit_code_t code_f, jit_code_t co
         }
     }
  
-    varStack->push (tempDesc3);
+    varStack->push_back (tempDesc3);
 }
 
 void JIT::storeVariablesToMemory ()
 {
-    stack<VariableDescriptor*>* varStackCopy;
-    
-    varStackCopy = new stack<VariableDescriptor*> (*varStack);
-    
-    while (varStackCopy->size () != 0)
+    int i = 0;    
+
+    while (i < varStack->size ())
     {
         VariableDescriptor *varDesc;
         
-        varDesc = varStackCopy->top ();
-        varStackCopy->pop ();
+        varDesc = varStack->at (i);
         
         if (varDesc->getMemLoc () == -1)
         {
@@ -508,38 +514,58 @@ void JIT::storeVariablesToMemory ()
         if (varDesc->getCurrLocation ().getLocationType () == RegisterLocation)
         {
             jitStack->copyRegToMem (_jit, varDesc->getMemLoc (), 
-                                      varDesc->getCurrLocation ().getValue (), 
-                                      getOperatorTypeFromString (varDesc->getType ()));
+                                    varDesc->getCurrLocation ().getValue (), 
+                                    getOperatorTypeFromString (varDesc->getType ()));
             varDesc->setCurrLocation (MemoryLocation, varDesc->getMemLoc ());
         }
+        
+        i++;
     }
 
-    delete varStackCopy;
-}
-
-void JIT::restoreVariablesFromMemory ()
-{
-    stack<VariableDescriptor*>* varStackCopy;
-    
-    varStackCopy = new stack<VariableDescriptor*> (*varStack);
-    
-    while (varStackCopy->size () != 0)
+    i = 0;
+    while (i < vectorLocalDescriptors.size ())
     {
         VariableDescriptor *varDesc;
         
-        varDesc = varStackCopy->top ();
-        varStackCopy->pop ();
+        varDesc = vectorLocalDescriptors.at (i);
+
+        if (varDesc->getCurrLocation ().getLocationType () == RegisterLocation)
+        {
+            jitStack->copyRegToMem (_jit, varDesc->getMemLoc (), 
+                                    varDesc->getCurrLocation ().getValue (), 
+                                    getOperatorTypeFromString (varDesc->getType ()));
+            varDesc->setCurrLocation (MemoryLocation, varDesc->getMemLoc ());
+        }
+        
+        i++;
+    }
+
+    for (i = 0; i < vectorIntRegisters.size (); i++)
+    {
+        vectorIntRegisters [i]->assignVariable (LULL);
+    }
+}
+
+void JIT::restoreVariablesFromMemory ()
+{    
+    int i = 0;
+    
+    while (i < varStack->size ())
+    {
+        VariableDescriptor *varDesc;
+        
+        varDesc = varStack->at (i);
         allocateRegister (varDesc);
     
         if (varDesc->getCurrLocation ().getLocationType () == RegisterLocation)
         {
             jitStack->copyMemToReg (_jit, varDesc->getMemLoc (), 
-                                      varDesc->getCurrLocation ().getValue (), 
-                                      getOperatorTypeFromString (varDesc->getType ()));
+                                    varDesc->getCurrLocation ().getValue (), 
+                                    getOperatorTypeFromString (varDesc->getType ()));
         }
+        
+        i++;
     }
-
-    delete varStackCopy;
 }
 
 void JIT::processBranchInstr (string _label, jit_code_t code_i, jit_code_t code_f, jit_code_t code_d)
@@ -561,11 +587,11 @@ void JIT::processBranchInstr (string _label, jit_code_t code_i, jit_code_t code_
         else
         {
             /* Other branch instructions */
-            VariableDescriptor* tempDesc1 = varStack->top ();
-            varStack->pop ();
-            VariableDescriptor* tempDesc2 = varStack->top ();
-            //varStack->push (tempDesc1);
-            varStack->pop ();
+            VariableDescriptor* tempDesc1 = varStack->back ();
+            varStack->pop_back ();
+            VariableDescriptor* tempDesc2 = varStack->back ();
+            //varStack->push_back (tempDesc1);
+            varStack->pop_back ();
             if (allocateRegister (tempDesc1) &&
                 dynamic_cast <VariableDescriptor*> (tempDesc1) != null)
             {
@@ -617,17 +643,17 @@ void JIT::processBranchInstr (string _label, jit_code_t code_i, jit_code_t code_
         if (code_i == -1 && code_f == -1 && code_d == -1)
         {
             /* br <label> */
-            label = new JITLabel (jit_label (), _label);
+            label = new JITLabel (jit_jmpi (), _label);
         }
         else
         {
             /* Other branch instructions */
             jit_node_t* label_node;
-            VariableDescriptor* tempDesc1 = varStack->top ();
-            varStack->pop ();
-            VariableDescriptor* tempDesc2 = varStack->top ();
-            //varStack->push (tempDesc1);
-            varStack->pop ();
+            VariableDescriptor* tempDesc1 = varStack->back ();
+            varStack->pop_back ();
+            VariableDescriptor* tempDesc2 = varStack->back ();
+            //varStack->push_back (tempDesc1);
+            varStack->pop_back ();
             if (allocateRegister (tempDesc1) &&
                 dynamic_cast <VariableDescriptor*> (tempDesc1) != null)
             {
@@ -669,10 +695,10 @@ void JIT::processBranchInstr (string _label, jit_code_t code_i, jit_code_t code_
         }
 
         mapLabels [_label] = label;
-        varStack = new stack<VariableDescriptor*> (*varStackStack.top ());
+        varStack = new vector<VariableDescriptor*> (*varStackStack.top ());
         varStackStack.push (varStack);
         //printf ("NOT FOUND %s\n", _label.c_str ());
-    }    
+    }
 }
 
 void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code)
@@ -796,8 +822,8 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
         L10:
         {
             /* dup */
-            VariableDescriptor* tempDesc1 = varStack->top ();
-            varStack->pop ();
+            VariableDescriptor* tempDesc1 = varStack->back ();
+            varStack->pop_back ();
             tempDesc = createTempDescriptor (tempDesc1->getSize (),
                                              getOperatorTypeFromString (tempDesc1->getType ()),
                                              "");
@@ -826,7 +852,7 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
                 }
             }
 
-            varStack->push (tempDesc);
+            varStack->push_back (tempDesc);
             continue;
         }
         /* Next are convert instructions,
@@ -834,13 +860,13 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
         L11:
         {
             /* conv.b */
-            VariableDescriptor* tempDesc1 = varStack->top ();
+            VariableDescriptor* tempDesc1 = varStack->back ();
 
             /* Temporary on the top of the stack
              * would be in a register for sure */
             allocateRegister (tempDesc1);
             /* So above call doesn't require a check for Temporary */
-            varStack->pop ();
+            varStack->pop_back ();
             tempDesc = createTempDescriptor (sizeof (unsigned char), UnsignedChar,
                                              "");
             if (isIntegerType (getOperatorTypeFromString (tempDesc1->getType ())))
@@ -861,19 +887,19 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
 
             jit_andi (tempDesc->getCurrLocation ().getValue (),
                       tempDesc->getCurrLocation ().getValue (), 0xFF);
-            varStack->push (tempDesc);
+            varStack->push_back (tempDesc);
             continue;
         }
         L12:
         {
             /* conv.s */
-            VariableDescriptor* tempDesc1 = varStack->top ();
+            VariableDescriptor* tempDesc1 = varStack->back ();
 
             /* Temporary on the top of the stack
              * would be in a register for sure */
             allocateRegister (tempDesc1);
             /* So above call doesn't require a check for Temporary */
-            varStack->pop ();
+            varStack->pop_back ();
             tempDesc = createTempDescriptor (sizeof (short), Short,
                                              "");
             if (isIntegerType (getOperatorTypeFromString (tempDesc1->getType ())))
@@ -894,19 +920,19 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
 
             jit_andi (tempDesc->getCurrLocation ().getValue (),
                       tempDesc->getCurrLocation ().getValue (), 0xFFFF);
-            varStack->push (tempDesc);
+            varStack->push_back (tempDesc);
             continue;
         }
         L13:
         {
             /* conv.i */
-            VariableDescriptor* tempDesc1 = varStack->top ();
+            VariableDescriptor* tempDesc1 = varStack->back ();
 
             /* Temporary on the top of the stack
              * would be in a register for sure */
             allocateRegister (tempDesc1);
             /* So above call doesn't require a check for Temporary */
-            varStack->pop ();
+            varStack->pop_back ();
             tempDesc = createTempDescriptor (sizeof (int), Integer,
                                              "");
             if (isIntegerType (getOperatorTypeFromString (tempDesc1->getType ())))
@@ -931,19 +957,19 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
                                tempDesc1->getCurrLocation ().getValue ());
             }
 
-            varStack->push (tempDesc);
+            varStack->push_back (tempDesc);
             continue;
         }
         L14:
         {
             /* conv.l */
-            VariableDescriptor* tempDesc1 = varStack->top ();
+            VariableDescriptor* tempDesc1 = varStack->back ();
 
             /* Temporary on the top of the stack
              * would be in a register for sure */
             allocateRegister (tempDesc1);
             /* So above call doesn't require a check for Temporary */
-            varStack->pop ();
+            varStack->pop_back ();
             tempDesc = createTempDescriptor (sizeof (long), Long,
                                              "");
             if (isIntegerType (getOperatorTypeFromString (tempDesc1->getType ())))
@@ -962,19 +988,19 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
                                tempDesc1->getCurrLocation ().getValue ());
             }
 
-            varStack->push (tempDesc);
+            varStack->push_back (tempDesc);
             continue;
         }
         L15:
         {
             /* conv.f */
-            VariableDescriptor* tempDesc1 = varStack->top ();
+            VariableDescriptor* tempDesc1 = varStack->back ();
 
             /* Temporary on the top of the stack
              * would be in a register for sure */
             allocateRegister (tempDesc1);
             /* So above call doesn't require a check for Temporary */
-            varStack->pop ();
+            varStack->pop_back ();
             tempDesc = createTempDescriptor (sizeof (float), Float,
                                              "");
             if (isIntegerType (getOperatorTypeFromString (tempDesc1->getType ())))
@@ -988,19 +1014,19 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
                               tempDesc1->getCurrLocation ().getValue ());
             }
  
-            varStack->push (tempDesc);
+            varStack->push_back (tempDesc);
             continue;
         }
         L16:
         {
             /* conv.d */
-            VariableDescriptor* tempDesc1 = varStack->top ();
+            VariableDescriptor* tempDesc1 = varStack->back ();
 
             /* Temporary on the top of the stack
              * would be in a register for sure */
             allocateRegister (tempDesc1);
             /* So above call doesn't require a check for Temporary */
-            varStack->pop ();
+            varStack->pop_back ();
             tempDesc = createTempDescriptor (sizeof (float), Float,
                                              "");
             if (isIntegerType (getOperatorTypeFromString (tempDesc1->getType ())))
@@ -1014,19 +1040,19 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
                               tempDesc1->getCurrLocation ().getValue ());
             }
  
-            varStack->push (tempDesc);
+            varStack->push_back (tempDesc);
             continue;
         }
         L17:
         {
             /* conv.c */
-            VariableDescriptor* tempDesc1 = varStack->top ();
+            VariableDescriptor* tempDesc1 = varStack->back ();
 
             /* Temporary on the top of the stack
              * would be in a register for sure */
             allocateRegister (tempDesc1);
             /* So above call doesn't require a check for Temporary */
-            varStack->pop ();
+            varStack->pop_back ();
             tempDesc = createTempDescriptor (sizeof (char), SignedChar,
                                              "");
             if (isIntegerType (getOperatorTypeFromString (tempDesc1->getType ())))
@@ -1047,7 +1073,7 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
 
             jit_andi (tempDesc->getCurrLocation ().getValue (),
                       tempDesc->getCurrLocation ().getValue (), 0xFF);
-            varStack->push (tempDesc);
+            varStack->push_back (tempDesc);
             continue;
         }
  
@@ -1069,7 +1095,9 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             MethodInfo *methodInfo;
             ClassInfo *classInfo;
             vector <VariableDescriptor*>* vectorArgs;
+            vector<VariableDescriptor*>* stackVar;
             
+            stackVar = new vector<VariableDescriptor*> (*varStack);
             instr = code->getInstruction (i)->getOp ();
             pos = instr.find (".");
             className = instr.substr (0, pos);
@@ -1080,16 +1108,16 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
 
             for (int i = 0; i < methodInfo->getParamCount (); i++)
             {
-                VariableDescriptor *desc = VariableDescriptor::copyVarDesc (varStack->top ());
+                VariableDescriptor *desc = VariableDescriptor::copyVarDesc (varStack->back ());
                 vectorArgs[0][methodInfo->getParamCount () - i - 1] = desc;
-                varStack->pop ();
+                varStack->pop_back ();
             }
 
             if (!methodInfo->getIsStatic ())
             {
                 vectorArgs[0].insert (vectorArgs->begin (), 
-                                      VariableDescriptor::copyVarDesc (varStack->top ()));
-                varStack->pop ();
+                                      VariableDescriptor::copyVarDesc (varStack->back ()));
+                varStack->pop_back ();
                 jit_ldxi (JIT_R0, JIT_FP, vectorArgs[0][0]->getMemLoc ());
                 jit_sti ((jit_pointer_t)ptrVM->getcalledObjectAddressMem (), JIT_R0);
             }
@@ -1100,6 +1128,7 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             }
     
             jit_pushargi ((jit_word_t)vectorArgs);
+            jit_pushargi ((jit_word_t)stackVar);
             jit_pushargi ((jit_word_t)classInfo);
             jit_pushargi ((jit_word_t)methodInfo);
             jit_finishi ((jit_pointer_t)VirtualMachine::callMethod);
@@ -1122,7 +1151,7 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
                  * as the memory is of long type */
                 jit_ldi_l (tempDesc->getCurrLocation ().getValue (), 
                          (jit_pointer_t)tempDesc->getMemLoc ());
-                varStack->push (tempDesc);
+                varStack->push_back (tempDesc);
             }
             else
             {
@@ -1140,7 +1169,7 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
         L21:
         {
             /* brzero <label> */
-            VariableDescriptor* tempDesc = varStack->top ();
+            VariableDescriptor* tempDesc = varStack->back ();
     
             processPushInstr (tempDesc->getSize (), getOperatorTypeFromString (tempDesc->getType ()),
                               "0");
@@ -1369,8 +1398,8 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             vectorIntRegisters [0]->assignVariable (LULL);
             
             /* Get the requested size */
-            tempDesc1 = varStack->top ();
-            varStack->pop ();
+            tempDesc1 = varStack->back ();
+            varStack->pop_back ();
 
             if (allocateRegister (tempDesc1) &&
                 dynamic_cast <TempDescriptor*> (tempDesc1) != LULL)
@@ -1389,7 +1418,7 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             TempDescriptor *tempDesc = createTempDescriptor (8, Long, "");
             vectorIntRegisters [0]->assignVariable (tempDesc);
             
-            varStack->push (tempDesc);
+            varStack->push_back (tempDesc);
             continue;
         }
  
@@ -1406,8 +1435,8 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             LocalDescriptor *arrayLocalDesc;
             LocalArray *localArray;
 
-            arrayDesc = varStack->top ();
-            varStack->pop ();
+            arrayDesc = varStack->back ();
+            varStack->pop_back ();
             arrayLocalDesc = dynamic_cast <LocalDescriptor*> (arrayDesc);
             localArray = dynamic_cast <LocalArray*> (arrayLocalDesc->getLocalVariable ());
             
@@ -1415,7 +1444,7 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             tempDesc = createTempDescriptor (4, Integer, "");
             jit_movi (tempDesc->getCurrLocation ().getValue (), localArray->getElements ());
             
-            varStack->push (tempDesc);            
+            varStack->push_back (tempDesc);            
             continue;
         }
  
@@ -1426,11 +1455,11 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             VariableDescriptor *indexDesc;
             LocalDescriptor *arrayLocalDesc;
            
-            indexDesc = varStack->top ();
-            varStack->pop ();
+            indexDesc = varStack->back ();
+            varStack->pop_back ();
             
-            arrayDesc = varStack->top ();
-            varStack->pop ();
+            arrayDesc = varStack->back ();
+            varStack->pop_back ();
 
             arrayLocalDesc = dynamic_cast <LocalDescriptor*> (arrayDesc);
             TempDescriptor *tempDesc = createTempDescriptor (8, Long, "");
@@ -1462,7 +1491,7 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
                       arrayDesc->getCurrLocation().getValue (),
                       tempDesc->getCurrLocation().getValue ());
             
-            varStack->push (tempDesc);
+            varStack->push_back (tempDesc);
             continue;
         }
  
@@ -1474,14 +1503,14 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             LocalDescriptor *arrayLocalDesc;
             VariableDescriptor *valueDesc;
             
-            indexDesc = varStack->top ();
-            varStack->pop ();
+            indexDesc = varStack->back ();
+            varStack->pop_back ();
 
-            arrayDesc = varStack->top ();
-            varStack->pop ();
+            arrayDesc = varStack->back ();
+            varStack->pop_back ();
             
-            valueDesc = varStack->top ();
-            varStack->pop ();
+            valueDesc = varStack->back ();
+            varStack->pop_back ();
             //jit_finishi ((jit_pointer_t)func);
             arrayLocalDesc = dynamic_cast <LocalDescriptor*> (arrayDesc);
             TempDescriptor *tempDesc = createTempDescriptor (8, Long, "");
@@ -1533,11 +1562,11 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             VariableDescriptor *indexDesc;
             LocalDescriptor *arrayLocalDesc;
 
-            indexDesc = varStack->top ();
-            varStack->pop ();
+            indexDesc = varStack->back ();
+            varStack->pop_back ();
             
-            arrayDesc = varStack->top ();
-            varStack->pop ();
+            arrayDesc = varStack->back ();
+            varStack->pop_back ();
             OperatorType optype = getOperatorTypeFromString (arrayDesc->getType ());
             int opsize = getSizeFromOperatorType (optype);
 
@@ -1573,7 +1602,7 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             jitStack->copyMemrToReg (_jit, tempDesc1->getCurrLocation ().getValue (),
                                      tempDesc->getCurrLocation ().getValue (),
                                      getOperatorTypeFromString (arrayLocalDesc->getType ()));
-            varStack->push (tempDesc);
+            varStack->push_back (tempDesc);
             continue;
         }
  
@@ -1581,30 +1610,54 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
         {
             // new <type>
             /* TODO: Call Constructor Also */
+            /* TODO: Keep track of all new stackVar created to free all of them */
             VariableDescriptor *assignedVar;
             TempDescriptor *tempDesc;
             char *type = new char[10];
-
-            strcpy (type, code->getInstruction(i)->getOp ().c_str ());
-            assignedVar = vectorIntRegisters [0]->getVarDescriptor ();
-            if (assignedVar != LULL)
-            {
-                allocateMemory (assignedVar);
-                jitStack->copyRegToMem (_jit, assignedVar->getMemLoc (),
-                                        assignedVar->getCurrLocation ().getValue (),
-                                        getOperatorTypeFromString (assignedVar->getType ()));
-            }
-
-            vectorIntRegisters [0]->assignVariable (LULL);
+            vector<VariableDescriptor*>* stackVar;
             
-            //printf ("%s\n", type);
+            storeVariablesToMemory ();
+            stackVar = new vector<VariableDescriptor*> ();
+            /* Have to create a copy of varStack. As we dont want 
+             * stackVar to be changed */
+            for (int j = 0; j < varStack->size (); j++)
+            {
+                /* Allocate memory or update memory of all 
+                 * temporaries if they are reference */
+                /* Only push temporary descriptors to the stackVar
+                 * No need of pushing LocalDescriptor as we have
+                 * already passed them */
+                TempDescriptor* tempDesc;
+                
+                tempDesc = dynamic_cast <TempDescriptor*> (varStack->at(j));
+
+                if (getOperatorTypeFromString (varStack->at(j)->getType ()) == Reference &&
+                    tempDesc != null)
+                {
+                    stackVar->push_back (tempDesc);
+                }
+            }
+        
+            strcpy (type, code->getInstruction(i)->getOp ().c_str ());            
+
+            jit_pushargi ((jit_word_t)stackVar);
             jit_pushargi ((jit_word_t)type);
             jit_finishi ((jit_pointer_t)VirtualMachine::allocateObject);
             tempDesc = createTempDescriptor (8, Reference, 
                                              "", code->getInstruction(i)->getOp ());
-            vectorIntRegisters [0]->assignVariable (tempDesc);
+            allocateMemory (tempDesc);
+            jit_retval_l (JIT_R0);
+            jitStack->copyRegToMem (_jit, tempDesc->getMemLoc (), JIT_R0, Reference);
+            restoreVariablesFromMemory ();
 
-            varStack->push (tempDesc);
+            if (allocateRegister (tempDesc))
+            {
+                jitStack->copyMemToReg (_jit, tempDesc->getMemLoc (),
+                                        tempDesc->getCurrLocation ().getValue (),
+                                        getOperatorTypeFromString (tempDesc->getType ()));
+            }
+            
+            varStack->push_back (tempDesc);
             continue;
         }
  
@@ -1612,8 +1665,8 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
         {
             //returnval
             
-            VariableDescriptor *returnDesc = varStack->top ();
-            varStack->pop ();
+            VariableDescriptor *returnDesc = varStack->back ();
+            varStack->pop_back ();
             
             if (allocateRegister (returnDesc) &&
                 dynamic_cast <TempDescriptor*> (returnDesc) != LULL)
@@ -1641,9 +1694,9 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             // ldloc
             int index = atoi (code->getInstruction (i)->getOp ().c_str ());
             LocalDescriptor* localDesc = vectorLocalDescriptors [index];
-            
+
             allocateRegister (localDesc);
-            varStack->push (localDesc);
+            varStack->push_back (localDesc);
             continue;
         }
  
@@ -1652,8 +1705,8 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             // stloc
             int index = atoi (code->getInstruction (i)->getOp ().c_str ());
             LocalDescriptor* localDesc = vectorLocalDescriptors [index];
-            VariableDescriptor* varDesc = varStack->top ();
-            varStack->pop ();
+            VariableDescriptor* varDesc = varStack->back ();
+            varStack->pop_back ();
 
             //Topmost value will always be in the register
             if (localDesc->getCurrLocation().getLocationType () == RegisterLocation)
@@ -1667,7 +1720,7 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             }
             else
             {
-                jitStack->copyRegToMem (_jit, localDesc->getCurrLocation().getValue (), 
+                jitStack->copyRegToMem (_jit, localDesc->getMemLoc (), 
                                         varDesc->getCurrLocation().getValue (),
                                         getOperatorTypeFromString (localDesc->getType ()));
             }
@@ -1704,8 +1757,8 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             {
                 /* If the member is not static only then pop the stack to get 
                  * the address of object */
-                varDesc = varStack->top ();
-                varStack->pop ();
+                varDesc = varStack->back ();
+                varStack->pop_back ();
             
                 tempDesc1 = createTempDescriptor (8, Long);
                 allocateRegister (tempDesc1);
@@ -1724,7 +1777,7 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
                 jitStack->copyMemrToReg (_jit, tempDesc1->getCurrLocation ().getValue (),
                                          tempDesc->getCurrLocation ().getValue (),
                                          optype);
-                varStack->push (tempDesc);
+                varStack->push_back (tempDesc);
                 delete tempDesc1;
             }
             else
@@ -1742,7 +1795,7 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
                                              tempDesc->getCurrLocation ().getValue (),
                                              optype);
                 }
-                varStack->push (tempDesc);
+                varStack->push_back (tempDesc);
             }
 
             continue;
@@ -1767,8 +1820,8 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             className = instr.substr (0, pos);
             fieldName = instr.substr (pos + 1, instr.length () - pos - 1);           
             
-            valueDesc = varStack->top ();
-            varStack->pop ();
+            valueDesc = varStack->back ();
+            varStack->pop_back ();
             
             pos = ptrVM->getPosForField (className, fieldName, &info);
             optype = getOperatorTypeFromString (info->getType ());
@@ -1789,8 +1842,8 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             }
             else
             {
-                varDesc = varStack->top ();
-                varStack->pop ();            
+                varDesc = varStack->back ();
+                varStack->pop_back ();            
 
                 tempDesc1 = createTempDescriptor (8, Long);
                 allocateRegister (tempDesc1);
@@ -1817,6 +1870,8 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
                 jitStack->copyRegToMemr (_jit, tempDesc1->getCurrLocation ().getValue (),
                                          valueDesc->getCurrLocation ().getValue (),
                                          optype);
+                                        
+                vectorIntRegisters[tempDesc1->getCurrLocation ().getValue ()]->assignVariable (LULL);
                 delete tempDesc1;
             }
 
@@ -1842,7 +1897,7 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
                                         getOperatorTypeFromString (varDesc->getType ()));
             }
 
-            varStack->push (varDesc);
+            varStack->push_back (varDesc);
             continue;
         }
         
@@ -1851,8 +1906,8 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             //starg
             int index = atoi (code->getInstruction (i)->getOp ().c_str ());
             VariableDescriptor* argDesc = vectorArgs[0][index];
-            VariableDescriptor* varDesc = varStack->top ();
-            varStack->pop ();
+            VariableDescriptor* varDesc = varStack->back ();
+            varStack->pop_back ();
 
             //Topmost value will always be in the register
             if (argDesc->getCurrLocation().getLocationType () == RegisterLocation)
@@ -1899,7 +1954,7 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
                 /* Label not found hence the label is used for a backward jump */
                 label = new JITLabel (jit_label (), code->getInstruction (i)->getOp ());
                 mapLabels [code->getInstruction (i)->getOp ()] = label;
-                varStack = new stack<VariableDescriptor*> (*varStackStack.top ());
+                varStack = new vector<VariableDescriptor*> (*varStackStack.top ());
                 varStackStack.push (varStack);
             }
  
@@ -1918,6 +1973,7 @@ int JIT::runMethodCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *cod
 {
     /* Before a function call Push all Registers on stack */
     /* Before returning pop all registers from stack */
+    this->vectorArgs = vectorArgs;
     pvfi myFunction;
     jit_node_t *in;
  
@@ -1940,12 +1996,12 @@ int JIT::runMethodCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *cod
     //jit_finishi ((jit_pointer_t)func);
     //jit_ldi_l (JIT_R1, (jit_pointer_t)vectorTempDescriptors [vectorTempDescriptors.size () - 1]->getCurrLocation ().getValue ());
 
-    jit_pushargi((jit_word_t)" %ld ll\n");
-    jit_ellipsis();
+    //jit_pushargi((jit_word_t)" %ld ll\n");
+    //jit_ellipsis();
     //printf ("TOP %d \n", vectorTempDescriptors [vectorTempDescriptors.size () - 1]->getCurrLocation ().getValue ());
     //jit_pushargr(vectorTempDescriptors [vectorTempDescriptors.size () - 1]->getCurrLocation ().getValue ());
     //jit_pushargr );
-    jit_pushargr(varStack->top ()->getCurrLocation ().getValue ());
+    //jit_pushargr(varStack->back ()->getCurrLocation ().getValue ());
     //jit_pushargr (JIT_FP);
     //jit_pushargr(vectorLocalDescriptors [0]->getCurrLocation ().getValue ());
     //jit_movi_d (JIT_F1, 9.60);

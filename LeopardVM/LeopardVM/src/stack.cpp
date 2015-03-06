@@ -20,6 +20,14 @@ void JITStack::allocateTemporary (jit_state *_jit, TempDescriptor* tempDesc)
 {
     stackTempPointer = allocateStack (_jit, tempDesc->getSize ());
     tempDesc->setMemLocation (stackTempPointer);
+
+    if (tempDesc->getCurrLocation ().getLocationType () == 
+        RegisterLocation)
+    {
+        /*copyRegToMem (_jit, tempDesc->getMemLoc (),
+                      tempDesc->getCurrLocation ().getValue (),
+                      getOperatorTypeFromString (tempDesc->getType ()));*/
+    }
 }
 
 void JITStack::copyMemToReg (jit_state* _jit, int loc, int reg, OperatorType type)

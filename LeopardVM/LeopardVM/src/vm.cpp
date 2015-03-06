@@ -11,11 +11,64 @@ extern VirtualMachine* ptrVM;
 extern JIT* currentJIT;
 extern unsigned long arrayAddress;
 
-void VirtualMachine::callMethod (vector<VariableDescriptor*>* vectorArgs, ClassInfo *classInfo,
-                                 MethodInfo *methodInfo)
+void VirtualMachine::doGarbageCollection ()
+{
+    gc.collectGarbage ();
+}
+
+void VirtualMachine::markAllObjectsUnreachable ()
+{
+    map<unsigned long, AllocatedObject*>::iterator iter;
+    
+    for (iter = mapAllocatedObject.begin (); 
+         iter != mapAllocatedObject.end (); ++iter)
+    {
+        iter->second->unsetReachable ();
+        iter->second->clearAllAddress ();
+    }
+}
+
+void VirtualMachine::getReachableForAddress (unsigned long address, 
+                                             vector<AllocatedObject*>& vec)
+{
+    /*AllocatedObject *obj;
+    ClassInfo *classInfo;
+    ClassInfo *_classInfo;
+    list<ClassInfo*> listClassInfos;
+    list<ClassInfo*>::iterator listIter;
+    unsigned long pos = 0;
+
+    obj = mapAllocatedObject.at (address);
+    vec.push_back (obj);
+    classInfo = obj->getClassInfo ();
+    
+    while (_classInfo != LULL)
+    {
+        listClassInfos.push_back (_classInfo);
+    }
+
+    listIter = listClassInfos.begin ();
+    
+    while (listIter != listClassInfos.end ())
+    {
+        for (int i = 0; i < (*listIter)->totalMembers (); i++)
+        {
+            
+        }
+
+        listIter++;
+    }*/
+}
+        
+void VirtualMachine::callMethod (vector<VariableDescriptor*>* vectorArgs, 
+                                 vector<VariableDescriptor*>* stackVarDesc,
+                                 ClassInfo *classInfo, MethodInfo *methodInfo)
 {
     unsigned long* prev = ptrVM->getCurrentJIT ()->getStackPointerMem ();
     unsigned long* objectAddress = ptrVM->getcalledObjectAddressMem ();
+    
+    /* Push the caller's stack */
+    ptrVM->pushCallerStack (stackVarDesc);
     AllocatedObject *allocObj;
     ClassInfo *allocObjClassInfo;
     JIT* jit;
@@ -95,6 +148,8 @@ void VirtualMachine::callMethod (vector<VariableDescriptor*>* vectorArgs, ClassI
     }
 
     delete vectorArgs;
+    /* Pop the caller's stack */
+    ptrVM->popCallerStack ();
 }
 
 MethodInfo *VirtualMachine::getMethodInfoOfClass (string cname, string mname)
@@ -203,7 +258,8 @@ unsigned int VirtualMachine::getPosForField (string cname, string fname, MemberI
     return pos;
 }
 
-AllocatedObject* VirtualMachine::_allocateObject (string type)
+AllocatedObject* VirtualMachine::_allocateObject (vector<VariableDescriptor*>* stackVarDesc,
+                                                  string type)
 {
     ClassInfo *classInfo;
     int size;
@@ -224,12 +280,12 @@ AllocatedObject* VirtualMachine::_allocateObject (string type)
         
         opTypeChild = getOperatorTypeFromString (classInfo->getMemberInfo (i)->getType ());
 
-        if (opTypeChild == Reference)
+        if (opTypeChild == Reference && !classInfo->getMemberInfo (i)->getIsStatic ())
         {
             AllocatedObject *obj;
             byte *mem;
 
-            obj = _allocateObject (classInfo->getMemberInfo (i)->getType ());
+            obj = _allocateObject (stackVarDesc, classInfo->getMemberInfo (i)->getType ());
             mem = memBlock->getMemory () + pos;
             unsigned long memstart = obj->getMemBlock ()->getStartPos ();
             unsigned long *lmem = (unsigned long *)mem;
@@ -249,11 +305,17 @@ AllocatedObject* VirtualMachine::_allocateObject (string type)
 }
 
 /* Create an object of class and returns the address of the object */
-unsigned long VirtualMachine::allocateObject (char* type)
+unsigned long VirtualMachine::allocateObject (vector<VariableDescriptor*>* stackVarDesc, char* type)
 {
     string stype (type);
-    AllocatedObject *obj = ptrVM->_allocateObject (stype);
     
+    /* Push current method's stack */
+    ptrVM->pushCallerStack (stackVarDesc);
+    AllocatedObject *obj = ptrVM->_allocateObject (stackVarDesc, stype);
+
+    /* Pop the current method's stack */
+    ptrVM->popCallerStack ();
+
     return obj->getMemBlock()->getStartPos ();
 }
 
@@ -270,9 +332,51 @@ ClassInfo *VirtualMachine::getClassInfoForName (string name)
     return LULL;
 }
 
-vector<AllocatedVariable*>* VirtualMachine::getRootSet ()
+RootSet* VirtualMachine::getRootSet ()
 {
+    stack <JIT*>* _stackJIT;
+
+    _stackJIT = new stack<JIT*> (stackJIT);
     
+    /*while (_stackJIT.size () != 0)
+    {
+        vector<LocalDescriptor*> vectorLocalDesc;
+        
+        vectorLocalDesc = *_stackJIT.top()->getLocalDescriptors ();
+
+        for (int i = 0; i < vectorLocalDesc.size (); i++)
+        {
+            rootSet.push_back (vectorLocalDesc [i]);
+        }
+
+        vector<VariableDescriptor*> vectorVarDesc;
+        
+        vectorVarDesc = *_stackJIT.top()->getArgumentDescriptors ();
+
+        for (int i = 0; i < vectorVarDesc.size (); i++)
+        {
+            rootSet.push_back (vectorVarDesc [i]);
+        }
+
+        _stackJIT.pop ();
+    }*/
+
+    vector<AllocatedObject*>* vecStaticAllocatedObj;
+    
+    vecStaticAllocatedObj = new vector<AllocatedObject*> ();
+    map<MemberInfo*, AllocatedVariable*>::iterator iter;
+
+    for (iter = mapStaticMembersAllocated.begin ();
+         iter !=  mapStaticMembersAllocated.end ();
+         ++iter)
+    {
+        if (getOperatorTypeFromString (iter->first->getType ()) == Reference)
+        {
+            vecStaticAllocatedObj->push_back (dynamic_cast <AllocatedObject*> (iter->second));
+        }
+    }
+    
+    return new RootSet (&vectorStackVarDesc, _stackJIT, vecStaticAllocatedObj);
 }
 
 int VirtualMachine::start (string filename)
@@ -303,6 +407,7 @@ int VirtualMachine::start (string filename)
     }
 
     /* Initialize and allocate storage to the static members of all classes */
+    printf ("Start Allocating Static\n");
     for (int i = 0; i < vectorClassInfo.size (); i++)
     {
         for (int j = 0; j < vectorClassInfo[i]->totalMembers (); j++)
@@ -317,6 +422,7 @@ int VirtualMachine::start (string filename)
     }
 
     stackJIT.push (jit);
+    printf ("Static Allocated\n");
     jit->runMethodCode (new vector<VariableDescriptor*> (), 
                         mainMethodInfo->getCode (), NULL);
 }
@@ -335,7 +441,7 @@ AllocatedVariable* VirtualMachine::allocateStaticMember (ClassInfo *classInfo,
     {
         AllocatedObject *allocatedObject;
 
-        allocatedObject = _allocateObject (type);
+        allocatedObject = _allocateObject (LULL, type);
         /* Store the allocated objects according to their start positions, keys */
         mapStaticMembersAllocated [memberInfo] = allocatedObject;
 

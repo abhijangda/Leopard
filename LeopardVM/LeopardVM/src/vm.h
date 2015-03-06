@@ -22,25 +22,66 @@ class ReferenceVariable
         MemoryBlock* memBlock;
 };
 
+class HeapPartition
+{
+    private:
+        map<unsigned long, MemoryBlock*> blockLists;
+        list<MemoryBlock*> freeBlockLists;
+        list<MemoryBlock*>::iterator iterCurrBlock; //Last position where block was added
+        MemoryBlock *createNewBlock (unsigned long size);
+        byte* allocatedMemory;
+        unsigned long sizeFilled;
+        MemoryBlock *lastBlock;
+
+    public:
+        MemoryBlock *allocate (unsigned long size);
+        int id;
+
+        ~HeapPartition ()
+        {
+            delete allocatedMemory;
+        }
+    
+        unsigned long getStartAddress ()
+        {
+            return (unsigned long)allocatedMemory;
+        }
+
+        HeapPartition (int id);
+        
+        void freeMemory (unsigned long address);
+        vector<AllocatedObject*>* getReachableObjects ();
+};
+
 class HeapAllocator
 {
     private:
-        list<MemoryBlock*> blockLists;
-        list<MemoryBlock*> freeBlockLists;
-        list<MemoryBlock*>::iterator iterCurrBlock; //Last position where block was added
+        /* We don't have to delete any partition. Insertion at the
+         * end of a vector is O(1). While we have to search through
+         * partitions to get to which partition a certain address
+         * belongs, for this purpose map is good */
         list<ReferenceVariable*> listReferenceVars;
-        MemoryBlock *createNewBlock (unsigned long size);
+        vector<HeapPartition*> vectorPartitions;
+        map<unsigned long, HeapPartition*> mapPartitions;
 
     public:
         HeapAllocator ();
         ~HeapAllocator ()
         {
+            for (int i = 0; i < vectorPartitions.size (); i++)
+            {
+                delete vectorPartitions.at (i);
+            }
         }
         
+        HeapPartition* getPartitionWithAddress (unsigned long address);
         MemoryBlock *allocate (unsigned long size);
+        MemoryBlock* allocateInPartition (int partition, unsigned long size);
+        vector<AllocatedObject*>* reachableObjectsForPartition (int partitionNum);
+        void freeAddress (unsigned long address);
 };
 
-class VirtualMachine 
+class VirtualMachine
 {
     public:
         int start (string filename);
@@ -56,13 +97,21 @@ class VirtualMachine
         }
         
         static unsigned long allocateArray (char* type, int size);
-        static unsigned long allocateObject (char *type);
-        static void callMethod (vector<VariableDescriptor*>* vectorVarDesc, ClassInfo *classInfo, MethodInfo *methodInfo);
+        static unsigned long allocateObject (vector<VariableDescriptor*>* stackVarDesc, char *type);
+        static void callMethod (vector<VariableDescriptor*>* vectorVarDesc, 
+                                vector<VariableDescriptor*>* stackVarDesc, 
+                                ClassInfo *classInfo, MethodInfo *methodInfo);
         ClassInfo *getClassInfoForName (string name);
         AllocatedObject *getAllocatedObjectForStartPos (unsigned long startPos);
         unsigned int getPosForField (string cname, string fname, MemberInfo** type);
         MethodInfo *getMethodInfoOfClass (string cname, string mname);
-        
+        void updateAddressForAllocatedObject (unsigned long prevAddress, 
+                                              unsigned long newAddress, AllocatedObject* obj)
+        {
+            mapAllocatedObject.erase (prevAddress);
+            mapAllocatedObject [newAddress] = obj;
+        }
+    
         JIT *getCurrentJIT ()
         {
             return jit;
@@ -103,8 +152,29 @@ class VirtualMachine
             return &gc;
         }
 
-        vector<AllocatedVariable *>* getRootSet ();
+        vector<VariableDescriptor*>* getAllStackVariables ();
+        
+        void pushCallerStack (vector<VariableDescriptor*>* stackVarDesc)
+        {
+            vectorStackVarDesc.push_back (stackVarDesc);
+        }
 
+        void popCallerStack ()
+        {
+            vectorStackVarDesc.pop_back ();
+        }
+        
+        RootSet* getRootSet ();
+        void getReachableForAddress (unsigned long address,
+                                     vector<AllocatedObject*>& vec);
+        AllocatedObject* getAllocObjectForAddress (unsigned long address)
+        {
+            return mapAllocatedObject.at (address);
+        }
+    
+        void markAllObjectsUnreachable ();
+        void doGarbageCollection ();
+        
     private:
         bool isLittleEndian;
         string mainFunction;
@@ -119,11 +189,11 @@ class VirtualMachine
         unsigned long calledObjectAddressMem;
         unsigned long returnValueMem;
         GarbageCollector gc;
-        vector<AllocatedVariable *> rootSet;
-        
+        vector<vector<VariableDescriptor*>*> vectorStackVarDesc;
+
         int read (const string filename);
         int getSizeForType (char *type);
-        AllocatedObject* _allocateObject (string type);
+        AllocatedObject* _allocateObject (vector<VariableDescriptor*>* stackVarDesc, string type);
         AllocatedVariable* allocateStaticMember (ClassInfo *classInfo, 
                                                MemberInfo *memberInfo);
 };

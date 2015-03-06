@@ -3,7 +3,8 @@ ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS}
 AM_CPPFLAGS = $(DEPS_CFLAGS)
 
 bin_PROGRAMS = LeopardVM
-LeopardVM_SOURCES = src/classinfo.cpp \
+LeopardVM_SOURCES = src/allocatedObject.h \
+ src/classinfo.cpp \
  src/classinfo.h \
  src/gc.cpp \
  src/gc.h \

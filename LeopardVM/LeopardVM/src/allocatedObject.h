@@ -9,12 +9,15 @@
 #ifndef __Allocated_Object_H__
 #define __Allocated_Object_H__
 
+class AllocatedVariable;
+
 class MemoryBlock
 {
     private:
         unsigned long size; //Size is in Bytes
         unsigned long startPos;
         byte *memory;
+        AllocatedVariable *allocVar;
     
     public:
         MemoryBlock (unsigned long size, unsigned long startPos, byte *memory)
@@ -24,9 +27,9 @@ class MemoryBlock
             this->memory = memory;
         }
     
-        MemoryBlock (unsigned long size)
+        MemoryBlock (unsigned long size, byte *memory)
         {
-            this->memory = new byte[size];
+            this->memory = memory;
             this->size = size;
             this->startPos = (unsigned long)this->memory;
         }
@@ -40,17 +43,37 @@ class MemoryBlock
         {
             return memory;
         }
+        
+        unsigned long getSize ()
+        {
+            return size;
+        }
+    
+        void setAllocatedVariable (AllocatedVariable *_allocVar)
+        {
+            allocVar = _allocVar;
+        }
+    
+        AllocatedVariable* getAllocatedVariable ()
+        {
+            return allocVar;
+        }
 };
 
 class AllocatedVariable
 {
     private:
         MemoryBlock *memBlock;
-    
+        /* This vector collects the addresses which contains address to this
+         * memory block's data. In other words, the address of the reference
+         * variable */
+        vector<unsigned long *> vectorAddresses;
+
     protected:
         AllocatedVariable (MemoryBlock *memBlock)
         {
             this->memBlock = memBlock;
+            memBlock->setAllocatedVariable (this);
         }
 
     public:
@@ -59,6 +82,33 @@ class AllocatedVariable
         MemoryBlock* getMemBlock () const
         {
             return memBlock;
+        }
+        
+        void setMemBlock (MemoryBlock* memBlock)
+        {
+            this->memBlock = memBlock;
+        }
+        
+        void pushAddress (unsigned long* address)
+        {
+            vectorAddresses.push_back (address);
+        }
+        
+        void clearAllAddress ()
+        {
+            vectorAddresses.clear ();
+        }
+    
+        int totalAddresses ()
+        {
+            return vectorAddresses.size ();
+        }
+    
+        unsigned long* popAddress ()
+        {
+            unsigned long* p = vectorAddresses.back ();
+            vectorAddresses.pop_back ();
+            return p;
         }
 };
 
@@ -86,6 +136,7 @@ class AllocatedObject : public AllocatedVariable
         AllocatedObject (ClassInfo *_classInfo, MemoryBlock* _memBlock) :
             AllocatedVariable (_memBlock)
         {
+            reachable = false;
             classInfo = _classInfo;
         }
 
@@ -99,6 +150,11 @@ class AllocatedObject : public AllocatedVariable
             return listChildren[i];
         }
     
+        int getTotalChildren ()
+        {
+            return listChildren.size ();
+        }
+
         string getType ()
         {
             return classInfo->getName ();
@@ -108,10 +164,28 @@ class AllocatedObject : public AllocatedVariable
         {
             return classInfo;
         }
+    
+        void setReachable ()
+        {
+            reachable = true;
+        }
+    
+        void unsetReachable ()
+        {
+            reachable = false;
+        }
+    
+        bool getIsReachable ()
+        {
+            return reachable;
+        }
+        
 
     private:
         ClassInfo *classInfo;
         vector<AllocatedObject*> listChildren;
+        
+        bool reachable;
 };
 
 #endif /* __Allocated_Object_H__ */

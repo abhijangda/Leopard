@@ -240,13 +240,15 @@ class JIT
     private:
         MethodCode* currentCode;
         JITStack* jitStack;
-        stack<VariableDescriptor*>* varStack;
-        stack<VariableDescriptor*>* rootVarStack;
-        stack<stack<VariableDescriptor*>* > varStackStack;
+        vector<VariableDescriptor*>* varStack;
+        vector<VariableDescriptor*>* stackBeforeAlloc;
+        vector<VariableDescriptor*>* rootVarStack;
+        stack<vector<VariableDescriptor*>* > varStackStack;
         vector <RegisterDescriptor*> vectorIntRegisters;
         vector <RegisterDescriptor*> vectorFloatRegisters;
         vector <LocalDescriptor*> vectorLocalDescriptors;
         vector <TempDescriptor*> vectorTempDescriptors;
+        vector<VariableDescriptor*>* vectorArgs;
         map <string, JITLabel*> mapLabels;
         unsigned long *stackPointerMem;
         unsigned long *prevStackPointerMem;
@@ -262,6 +264,10 @@ class JIT
         void copyVariables (VariableDescriptor *src, VariableDescriptor *dest);
         void storeVariablesToMemory ();
         void restoreVariablesFromMemory ();
+        vector<VariableDescriptor*>* getVarStackBeforeAllocation ()
+        {
+            return stackBeforeAlloc;
+        }
 
     public:
         JIT ();
@@ -270,6 +276,15 @@ class JIT
         void convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode* code);
         jit_state* _jit;
         //static VariableDescriptor* copyVarDesc (VariableDescriptor* varDesc);
+        vector<LocalDescriptor*>* getLocalDescriptors ()
+        {
+            return &vectorLocalDescriptors;
+        }
+        
+        vector<VariableDescriptor*>* getArgumentDescriptors ()
+        {
+            return vectorArgs;
+        }
 
         unsigned long *getStackPointerMem ()
         {

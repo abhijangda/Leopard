@@ -299,7 +299,7 @@ class JIT
             jit_clear_state();
             jit_destroy_state();
             finish_jit();
-    
+            delete argsMemLocation;
             delete stackPointerMem;
         }
     

@@ -28,38 +28,6 @@ void VirtualMachine::markAllObjectsUnreachable ()
         iter->second->clearAllAddress ();
     }
 }
-
-void VirtualMachine::getReachableForAddress (unsigned long address, 
-                                             vector<AllocatedObject*>& vec)
-{
-    /*AllocatedObject *obj;
-    ClassInfo *classInfo;
-    ClassInfo *_classInfo;
-    list<ClassInfo*> listClassInfos;
-    list<ClassInfo*>::iterator listIter;
-    unsigned long pos = 0;
-
-    obj = mapAllocatedObject.at (address);
-    vec.push_back (obj);
-    classInfo = obj->getClassInfo ();
-    
-    while (_classInfo != LULL)
-    {
-        listClassInfos.push_back (_classInfo);
-    }
-
-    listIter = listClassInfos.begin ();
-    
-    while (listIter != listClassInfos.end ())
-    {
-        for (int i = 0; i < (*listIter)->totalMembers (); i++)
-        {
-            
-        }
-
-        listIter++;
-    }*/
-}
         
 void VirtualMachine::callMethod (vector<VariableDescriptor*>* vectorArgs, 
                                  vector<VariableDescriptor*>* stackVarDesc,

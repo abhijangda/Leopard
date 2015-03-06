@@ -17,6 +17,7 @@
  * different architectures, Create cases to store the register value where 
  * functions value is returned. For different processors type 
  * (x86, SPARC, PORWERPC) it will be different.
+ * TODO: Add Garbage Collection for Arrays.
  */
  
 JIT* currentJIT;
@@ -741,6 +742,7 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
         {
             continue;
         }
+
         long * loc = argsMemLocation + i;
 
         /* Copy previous value to JIT_R1 */

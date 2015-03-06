@@ -173,8 +173,6 @@ class VirtualMachine
         }
         
         RootSet* getRootSet ();
-        void getReachableForAddress (unsigned long address,
-                                     vector<AllocatedObject*>& vec);
         AllocatedObject* getAllocObjectForAddress (unsigned long address)
         {
             return mapAllocatedObject.at (address);

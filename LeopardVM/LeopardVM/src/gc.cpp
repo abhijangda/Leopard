@@ -48,8 +48,22 @@ vector<AllocatedObject*>* RootSet::getRootAllocatedObjects ()
 
         for (int i = 0; i < vectorVarDesc.size (); i++)
         {
-            /* TODO: Correct for arguments. 
-             * Although this shouldn't be different in any way */
+            if (getOperatorTypeFromString (vectorVarDesc[i]->getType ()) != 
+                Reference)
+            {
+                continue;
+            }
+
+            unsigned long *r;
+            r = (unsigned long *)(vectorVarDesc[i]->getMemLoc () + *stackJIT->top()->getStackPointerMem ());
+
+            if ((*r) != 0)
+            {
+                /* If value is 0 then address has not been assigned */
+                allocObj = ptrVM->getAllocObjectForAddress (*r);
+                allocObj->pushAddress (r);
+                vecAllocObj->push_back (allocObj);
+            }
         }
 
         vector<VariableDescriptor*>* vecVarDesc;

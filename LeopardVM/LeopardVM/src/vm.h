@@ -117,9 +117,17 @@ class VirtualMachine
             return jit;
         }
 
-        JIT *pushJIT ()
+        JIT *pushJIT (JIT* to_push = LULL)
         {
-            jit = new JIT ();
+            if (to_push == LULL)
+            {
+                jit = new JIT ();
+            }
+            else
+            {
+                jit = to_push;
+            }
+
             stackJIT.push (jit);
             return jit;
         }
@@ -174,6 +182,15 @@ class VirtualMachine
     
         void markAllObjectsUnreachable ();
         void doGarbageCollection ();
+        JIT* getJITForMethodInfo (MethodInfo* methodInfo)
+        {
+            return mapJITForMethod.at (methodInfo);
+        }
+
+        void addJITForMethodInfo (MethodInfo* methodInfo, JIT* jit)
+        {
+            mapJITForMethod [methodInfo] = jit;
+        }
         
     private:
         bool isLittleEndian;
@@ -181,6 +198,7 @@ class VirtualMachine
         string mainClass;
         vector<ClassInfo*> vectorClassInfo;
         map<unsigned long, AllocatedObject*> mapAllocatedObject;
+        map <MethodInfo*, JIT*> mapJITForMethod;
         map<MemberInfo*, AllocatedVariable*> mapStaticMembersAllocated;
         vector<MemberInfo*> vectorStaticMembers;
         stack<JIT*> stackJIT;

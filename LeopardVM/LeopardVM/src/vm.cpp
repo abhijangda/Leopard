@@ -2,6 +2,7 @@
 #include <vector>
 #include <stdio.h>
 #include <sstream>
+#include <stdexcept>
 
 #include "helper_functions.h"
 #include "vm.h"
@@ -73,74 +74,90 @@ void VirtualMachine::callMethod (vector<VariableDescriptor*>* vectorArgs,
     ClassInfo *allocObjClassInfo;
     JIT* jit;
 
-    /* We need to find two things here:
-       1. Find the virtual method
-       2. Find the parent class method
-
-    Check if the allocObj's Class is same as the supplied class
-    If yes then this class is the required class and the method
-        is the required method
-    If no then if allocObjClassInfo is the subclass of the classInfo then
-        There is either a virtual method call or a inherited method call.
-        But inherited method call has been resolved earlier.
-        Else Error
-    */
-    allocObj = ptrVM->mapAllocatedObject [*objectAddress];
-    allocObjClassInfo = allocObj->getClassInfo ();
-    
-    if (classInfo != allocObjClassInfo)
+    if (!methodInfo->getIsStatic ())
     {
-        ClassInfo* _classInfo;
-        
-        _classInfo = allocObjClassInfo->getParentClassInfo ();
-
-        while (_classInfo != LULL && (_classInfo != classInfo))
-        {
-            _classInfo = _classInfo->getParentClassInfo ();
-        }
+        /* We need to find two things here:
+           1. Find the virtual method
+           2. Find the parent class method
     
-        if (_classInfo == LULL)
+        Check if the allocObj's Class is same as the supplied class
+        If yes then this class is the required class and the method
+            is the required method
+        If no then if allocObjClassInfo is the subclass of the classInfo then
+            There is either a virtual method call or a inherited method call.
+            But inherited method call has been resolved earlier.
+            Else Error
+        */
+        allocObj = ptrVM->mapAllocatedObject [*objectAddress];
+        allocObjClassInfo = allocObj->getClassInfo ();
+        
+        if (classInfo != allocObjClassInfo)
         {
-            /* ERROR: Invalid Class Name supplied */
-        }
-        else
-        {
-            /* As classInfo is parent of allocObjClassInfo, so the call is virtual */
-            /* Go up the parents of the allocObjClassInfo and search for the same 
-             * method name 
-             */
+            ClassInfo* _classInfo;
             
-            _classInfo = allocObjClassInfo;
-
-            while (_classInfo != LULL)
+            _classInfo = allocObjClassInfo->getParentClassInfo ();
+    
+            while (_classInfo != LULL && (_classInfo != classInfo))
             {
-                bool toBreak = false;
-
-                for (int i = 0; i < _classInfo->totalMethods (); i++)
+                _classInfo = _classInfo->getParentClassInfo ();
+            }
+        
+            if (_classInfo == LULL)
+            {
+                /* ERROR: Invalid Class Name supplied */
+            }
+            else
+            {
+                /* As classInfo is parent of allocObjClassInfo, so the call is virtual */
+                /* Go up the parents of the allocObjClassInfo and search for the same 
+                 * method name 
+                 */
+                
+                _classInfo = allocObjClassInfo;
+    
+                while (_classInfo != LULL)
                 {
-                    if (_classInfo->getMethodInfo (i)->getName () ==
-                        methodInfo->getName ())
+                    bool toBreak = false;
+    
+                    for (int i = 0; i < _classInfo->totalMethods (); i++)
                     {
-                        methodInfo = _classInfo->getMethodInfo (i);
-                        toBreak = true;
+                        if (_classInfo->getMethodInfo (i)->getName () ==
+                            methodInfo->getName ())
+                        {
+                            methodInfo = _classInfo->getMethodInfo (i);
+                            toBreak = true;
+                            break;
+                        }
+                    }
+    
+                    if (toBreak)
+                    {
                         break;
                     }
+    
+                    _classInfo = _classInfo->getParentClassInfo ();
                 }
-
-                if (toBreak)
-                {
-                    break;
-                }
-
-                _classInfo = _classInfo->getParentClassInfo ();
             }
         }
     }
 
-    jit = ptrVM->pushJIT ();
+    try
+    {
+        /* Search if the code has been already compiled by a JIT 
+         * If yes then use it */
+        jit = ptrVM->getJITForMethodInfo (methodInfo);
+        ptrVM->pushJIT (jit);
+    }
+    catch (const std::out_of_range& _a)
+    {
+        /* If no then create a new JIT */
+        jit = ptrVM->pushJIT ();
+        ptrVM->addJITForMethodInfo (methodInfo, jit);
+    }
+
+    
     jit->runMethodCode (vectorArgs, methodInfo->getCode (), prev);
     ptrVM->popJIT ();
-    delete jit;
 
     for (int i = 0; i < vectorArgs->size (); i++)
     {
@@ -407,7 +424,6 @@ int VirtualMachine::start (string filename)
     }
 
     /* Initialize and allocate storage to the static members of all classes */
-    printf ("Start Allocating Static\n");
     for (int i = 0; i < vectorClassInfo.size (); i++)
     {
         for (int j = 0; j < vectorClassInfo[i]->totalMembers (); j++)
@@ -422,7 +438,7 @@ int VirtualMachine::start (string filename)
     }
 
     stackJIT.push (jit);
-    printf ("Static Allocated\n");
+    mapJITForMethod [mainMethodInfo] = jit;
     jit->runMethodCode (new vector<VariableDescriptor*> (), 
                         mainMethodInfo->getCode (), NULL);
 }
@@ -639,7 +655,7 @@ int VirtualMachine::read (const string filename)
 
             MethodCode *methodCode = new MethodCode (vectorLocals, vectorInstructions);
             vectorMethodInfo.insert (vectorMethodInfo.end (), 
-                                     (new MethodInfo (membername, type_name, (bool)(firstinfo >> 2),
+                                     (new MethodInfo (membername, type_name, (bool)(firstinfo & 0x1),
                                       (AccessSpecifier)(firstinfo - ((firstinfo >> 2) << 2)),
                                        vectorParamTypes, methodCode)));
             

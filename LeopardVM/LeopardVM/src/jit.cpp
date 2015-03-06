@@ -208,6 +208,8 @@ JIT::JIT ()
     varStack = varStackStack.top ();
     rootVarStack = varStack;
     
+    compiledFunction = LULL;
+    argsMemLocation = LULL;
     stackPointerMem = new unsigned long;
 }
 
@@ -725,6 +727,12 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
         allocateMemory (localDesc);
     }
 
+    if (vectorArgs->size () > 0)
+    {
+        /* Copy previous stack pointer to JIT_R2 */
+        jit_ldi_l (JIT_R2, (jit_pointer_t)prevStackPointerMem);
+    }
+
     /* Copy Arguments from previous stack to this stack */
     for (int i = 0; i < vectorArgs->size (); i++)
     {
@@ -733,13 +741,12 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
         {
             continue;
         }
-        
-        long prevMemLoc = vectorArgs[0][i]->getMemLoc ();
-        /* Copy previous stack pointer to JIT_R2 */
-        jit_ldi_l (JIT_R2, (jit_pointer_t)prevStackPointerMem);
-        
+        long * loc = argsMemLocation + i;
+
         /* Copy previous value to JIT_R1 */
-        jitStack->copyMemxiToReg (_jit, JIT_R2, prevMemLoc, JIT_R1, getOperatorTypeFromString (vectorArgs[0][i]->getType ()));
+        jit_ldi_l (JIT_V0, (jit_pointer_t)loc);
+        jitStack->copyMemxrToReg (_jit, JIT_R2, JIT_V0, JIT_R1,
+                                  getOperatorTypeFromString (vectorArgs[0][i]->getType ()));
         allocateMemory (vectorArgs[0][i]);
         /* Copy value to newly allocated memory */
         jitStack->copyRegToMem (_jit, vectorArgs[0][i]->getMemLoc (), JIT_R1, 
@@ -1974,49 +1981,56 @@ int JIT::runMethodCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *cod
     /* Before a function call Push all Registers on stack */
     /* Before returning pop all registers from stack */
     this->vectorArgs = vectorArgs;
-    pvfi myFunction;
     jit_node_t *in;
  
     prevStackPointerMem = prevSPMem;
     //currentJIT = this;
-    jitStack = new JITStack ();
+    if (argsMemLocation == LULL)
+        argsMemLocation = new long[vectorArgs->size ()];
+
+    for (int i = 0; i < vectorArgs->size (); i++)
+    {
+        argsMemLocation [i] = vectorArgs->at (i)->getMemLoc ();
+    }
+
+    if (compiledFunction == LULL)
+    {
+        jitStack = new JITStack ();
  
-    _jit = jit_new_state();
-    jit_prolog();
-    jit_sti ((jit_pointer_t)stackPointerMem, JIT_FP);
-    convertCode (vectorArgs, code);
-    //printf ("RUNNING CODE\n");
-    //jit_node_t *jump;
-    //jit_movi (JIT_R0, 10);
-    //jump = jit_beqi (JIT_R0, 10);
-    //jit_movi (JIT_R0, 3);
-    //jit_patch (jump);
-    //jit_finishi((jit_pointer_t)func);
-    //jit_retval_i(JIT_R1);
-    //jit_finishi ((jit_pointer_t)func);
-    //jit_ldi_l (JIT_R1, (jit_pointer_t)vectorTempDescriptors [vectorTempDescriptors.size () - 1]->getCurrLocation ().getValue ());
+        _jit = jit_new_state();
+        jit_prolog();
+        jit_sti ((jit_pointer_t)stackPointerMem, JIT_FP);
+        convertCode (vectorArgs, code);
+        //printf ("RUNNING CODE\n");
+        //jit_node_t *jump;
+        //jit_movi (JIT_R0, 10);
+        //jump = jit_beqi (JIT_R0, 10);
+        //jit_movi (JIT_R0, 3);
+        //jit_patch (jump);
+        //jit_finishi((jit_pointer_t)func);
+        //jit_retval_i(JIT_R1);
+        //jit_finishi ((jit_pointer_t)func);
+        //jit_ldi_l (JIT_R1, (jit_pointer_t)vectorTempDescriptors [vectorTempDescriptors.size () - 1]->getCurrLocation ().getValue ());
+    
+        jit_pushargi((jit_word_t)" %ld ll\n");
+        jit_ellipsis();
+        //printf ("TOP %d \n", vectorTempDescriptors [vectorTempDescriptors.size () - 1]->getCurrLocation ().getValue ());
+        //jit_pushargr(vectorTempDescriptors [vectorTempDescriptors.size () - 1]->getCurrLocation ().getValue ());
+        //jit_pushargr );
+        jit_pushargr(varStack->back ()->getCurrLocation ().getValue ());
+        //jit_pushargr (JIT_FP);
+        //jit_pushargr(vectorLocalDescriptors [0]->getCurrLocation ().getValue ());
+        //jit_movi_d (JIT_F1, 9.60);
+        //jit_pushargr_d (JIT_F0);
+        //jit_pushargr (JIT_V2);
+        jit_finishi((jit_pointer_t)printf);
+        jit_ret();
+        jit_epilog();
+    
+        compiledFunction = (compiledFunctionSig)jit_emit();
+    }
 
-    //jit_pushargi((jit_word_t)" %ld ll\n");
-    //jit_ellipsis();
-    //printf ("TOP %d \n", vectorTempDescriptors [vectorTempDescriptors.size () - 1]->getCurrLocation ().getValue ());
-    //jit_pushargr(vectorTempDescriptors [vectorTempDescriptors.size () - 1]->getCurrLocation ().getValue ());
-    //jit_pushargr );
-    //jit_pushargr(varStack->back ()->getCurrLocation ().getValue ());
-    //jit_pushargr (JIT_FP);
-    //jit_pushargr(vectorLocalDescriptors [0]->getCurrLocation ().getValue ());
-    //jit_movi_d (JIT_F1, 9.60);
-    //jit_pushargr_d (JIT_F0);
-    //jit_pushargr (JIT_V2);
-    jit_finishi((jit_pointer_t)printf);
-    jit_ret();
-    jit_epilog();
+    compiledFunction();
 
-    myFunction = (pvfi)jit_emit();
-
-    myFunction();
-    jit_clear_state();
-    //jit_disassemble();
-    jit_destroy_state();
-    finish_jit();
     return 0;
 }

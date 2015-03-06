@@ -14,7 +14,7 @@ extern "C"
 #define null 0
 #define LULL 0
 
-typedef void (*pvfi)();
+typedef void (*compiledFunctionSig)();
 
 enum LocationType
 {
@@ -249,6 +249,7 @@ class JIT
         vector <LocalDescriptor*> vectorLocalDescriptors;
         vector <TempDescriptor*> vectorTempDescriptors;
         vector<VariableDescriptor*>* vectorArgs;
+        long* argsMemLocation;
         map <string, JITLabel*> mapLabels;
         unsigned long *stackPointerMem;
         unsigned long *prevStackPointerMem;
@@ -268,6 +269,8 @@ class JIT
         {
             return stackBeforeAlloc;
         }
+
+        compiledFunctionSig compiledFunction;
 
     public:
         JIT ();
@@ -293,7 +296,16 @@ class JIT
         
         ~JIT ()
         {
+            jit_clear_state();
+            jit_destroy_state();
+            finish_jit();
+    
             delete stackPointerMem;
+        }
+    
+        void callCompiledFunction ()
+        {
+            compiledFunction ();
         }
 };
 

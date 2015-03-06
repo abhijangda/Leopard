@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-#define PARTITION_SIZE 128
+#define PARTITION_SIZE 1024*1024
 
 extern VirtualMachine *ptrVM;
 

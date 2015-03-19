@@ -39,6 +39,13 @@ class HeapPartition
 
         ~HeapPartition ()
         {
+            map<unsigned long, MemoryBlock*>::iterator iter;
+        
+            for (iter = blockLists.begin (); iter != blockLists.end (); ++iter)
+            {
+                delete iter->second;
+            }
+
             delete allocatedMemory;
         }
     
@@ -66,6 +73,7 @@ class HeapAllocator
 
     public:
         HeapAllocator ();
+
         ~HeapAllocator ()
         {
             for (int i = 0; i < vectorPartitions.size (); i++)
@@ -190,6 +198,34 @@ class VirtualMachine
             mapJITForMethod [methodInfo] = jit;
         }
         
+        ~VirtualMachine ()
+        {
+            while (stackJIT.size () != 0)
+            {
+                delete stackJIT.top ();
+                stackJIT.pop ();
+            }
+            
+            delete heapAllocator;
+            
+            for (int i = 0; i < vectorClassInfo.size (); i++)
+            {
+                delete vectorClassInfo[i];
+            }
+            
+            map<unsigned long, AllocatedObject*>::iterator iter;
+            
+            for (iter = mapAllocatedObject.begin (); iter != mapAllocatedObject.end (); iter++)
+            {
+                delete iter->second;
+            }
+            
+            for (int i = 0; i < vectorStackVarDesc.size(); i++)
+            {
+                delete vectorStackVarDesc[i];
+            }
+        }
+
     private:
         bool isLittleEndian;
         string mainFunction;

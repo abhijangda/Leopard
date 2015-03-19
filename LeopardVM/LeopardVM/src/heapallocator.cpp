@@ -69,7 +69,7 @@ MemoryBlock *HeapPartition::createNewBlock (unsigned long size)
     memBlock = new MemoryBlock (size, mem);
     blockLists[(unsigned long)mem] = memBlock;
     sizeFilled += size;
-    
+
     return memBlock;
 }
 

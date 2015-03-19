@@ -1,6 +1,7 @@
 #include "jit.h"
 #include "vm.h"
 #include "main.h"
+#include "basic_block.h"
 
 #include <stdio.h>
 #include <string>
@@ -707,7 +708,16 @@ void JIT::processBranchInstr (string _label, jit_code_t code_i, jit_code_t code_
 void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code)
 {
     int size = 0;
+    bool createBasicBlocks = true;
+    int startBlockInstr = 0;
+    int endBlockInstr = 0;
 
+    /* Don't re-create BasicBlocks if they have already been */
+    if (vectorBasicBlocks.size () != 0)
+    {
+        createBasicBlocks = false;
+    }
+    
     /* Get total size of locals */
     for (int i = 0; i < code->getTotalLocals (); i++)
     {
@@ -782,7 +792,7 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             /* push.b */
             processPushInstr (sizeof (char), UnsignedChar,
                               code->getInstruction (i)->getOp ());
-            continue;
+            goto addInstructionToBasicBlock;
         }
 
         L4:
@@ -1172,12 +1182,15 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
         /* Branch Instructions */
         L20:
         {
+            /* br <label> */
+            endBasicBlock (startBlockInstr, endBlockInstr, code->getInstruction (i));
             processBranchInstr (code->getInstruction (i)->getOp (), (jit_code_t)-1, (jit_code_t)-1, (jit_code_t)-1);
             continue;
         }
         L21:
         {
             /* brzero <label> */
+            endBasicBlock (startBlockInstr, endBlockInstr, code->getInstruction (i));
             VariableDescriptor* tempDesc = varStack->back ();
     
             processPushInstr (tempDesc->getSize (), getOperatorTypeFromString (tempDesc->getType ()),
@@ -1188,32 +1201,37 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
         L22:
         {
             /* beq <label> */
+            endBasicBlock (startBlockInstr, endBlockInstr, code->getInstruction (i));
             processBranchInstr (code->getInstruction (i)->getOp (), jit_code_beqr, jit_code_beqr_f, jit_code_beqr_d);
             continue;
         }
         L23:
         {
             /* bge <label> */
+            endBasicBlock (startBlockInstr, endBlockInstr, code->getInstruction (i));
             processBranchInstr (code->getInstruction (i)->getOp (), jit_code_bger, jit_code_bger_f, jit_code_bger_d);
             continue;
         }
         L24:
         {
             /* bgt <label> */
+            endBasicBlock (startBlockInstr, endBlockInstr, code->getInstruction (i));
             processBranchInstr (code->getInstruction (i)->getOp (), jit_code_bgtr, jit_code_bgtr_f, jit_code_bgtr_d);
             continue;
         }
         L25:
         {
             /* ble <label> */
+            endBasicBlock (startBlockInstr, endBlockInstr, code->getInstruction (i));
             processBranchInstr (code->getInstruction (i)->getOp (), jit_code_bler, jit_code_bler_f, jit_code_bler_d);
             continue;
         }
         L26:
         {
             /* blt <label> */
+            endBasicBlock (startBlockInstr, endBlockInstr, code->getInstruction (i));
             processBranchInstr (code->getInstruction (i)->getOp (), jit_code_bltr, jit_code_bltr_f, jit_code_bltr_d);
-            continue; 
+            continue;
         }
         /* Arithmetic Instructions */
         L27:
@@ -1419,7 +1437,7 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
             }
             char *type = new char[10];
             strcpy (type, code->getInstruction(i)->getOp ().c_str ());
-            //printf ("%s\n", type);
+
             jit_pushargi ((jit_word_t)type);
             jit_pushargr (tempDesc1->getCurrLocation ().getValue ());
             jit_finishi ((jit_pointer_t)VirtualMachine::allocateArray);
@@ -1949,7 +1967,7 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
              * This can happen if there has to be forward jump. In this case
              * Label is created by branch instructions */
             JITLabel *label = null;
- 
+            endBasicBlock (startBlockInstr, endBlockInstr, code->getInstruction (i));
             try
             {
                 label = mapLabels.at (code->getInstruction (i)->getOp ());
@@ -1969,12 +1987,76 @@ void JIT::convertCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code
  
             continue;
         }
+        
+        addInstructionToBasicBlock:
+            endBlockInstr++;
+
+            continue;
+        
+        startBasicBlock:
+            endBlockInstr++;
+            continue;
+        
+        /*endBasicBlock:
+            continue;
+        
+            if (code->getInstruction (i)->getByteCode () == 100)
+            {
+                vectorBasicBlocks.push_back (new BasicBlock (startBlockInstr, endBlockInstr - startBlockInstr));
+                startBlockInstr = endBlockInstr;
+                endBlockInstr++;
+            }
+            else
+            {
+                vectorBasicBlocks.push_back (new BasicBlock (startBlockInstr, endBlockInstr - startBlockInstr + 1));
+                startBlockInstr = endBlockInstr + 1;
+                endBlockInstr++;
+            }
+        
+            
+            jit_sti ((jit_pointer_t) (&memForBasicBlocks), JIT_R0);
+            jit_ldi (JIT_R0, (jit_pointer_t) (&vectorBasicBlocks[vectorBasicBlocks.size () - 1]->executionCount));
+            jit_addi (JIT_R0, JIT_R0, 1);
+            jit_sti ((jit_pointer_t) (&vectorBasicBlocks[vectorBasicBlocks.size () - 1]->executionCount), JIT_R0);
+            jit_ldi (JIT_R0, (jit_pointer_t) (&memForBasicBlocks));
+            continue;*/
     }
+    
+    vectorBasicBlocks.push_back (new BasicBlock (startBlockInstr, endBlockInstr - startBlockInstr));
+    jit_sti ((jit_pointer_t) (&memForBasicBlocks), JIT_R0);
+    jit_ldi (JIT_R0, (jit_pointer_t) (&vectorBasicBlocks[vectorBasicBlocks.size () - 1]->executionCount));
+    jit_addi (JIT_R0, JIT_R0, 1);
+    jit_sti ((jit_pointer_t) (&vectorBasicBlocks[vectorBasicBlocks.size () - 1]->executionCount), JIT_R0);
+    jit_ldi (JIT_R0, (jit_pointer_t) (&memForBasicBlocks));
 }
 
 static int func ()
 {
     return 2;
+}
+
+void JIT::endBasicBlock (int& startBlockInstr, int& endBlockInstr, Instruction* instr)
+{
+    if (instr->getByteCode () == 100)
+            {
+                vectorBasicBlocks.push_back (new BasicBlock (startBlockInstr, endBlockInstr - startBlockInstr));
+                startBlockInstr = endBlockInstr;
+                endBlockInstr++;
+            }
+            else
+            {
+                vectorBasicBlocks.push_back (new BasicBlock (startBlockInstr, endBlockInstr - startBlockInstr + 1));
+                startBlockInstr = endBlockInstr + 1;
+                endBlockInstr++;
+            }
+        
+            /* Add code to increment the execution counter of basic block */
+            /* Use R0 register */
+            jit_sti ((jit_pointer_t) (&memForBasicBlocks), JIT_R0);
+            jit_ldi (JIT_R0, (jit_pointer_t) (&vectorBasicBlocks[vectorBasicBlocks.size () - 1]->executionCount));
+            jit_addi (JIT_R0, JIT_R0, 1);
+            jit_sti ((jit_pointer_t) (&vectorBasicBlocks[vectorBasicBlocks.size () - 1]->executionCount), JIT_R0);
+            jit_ldi (JIT_R0, (jit_pointer_t) (&memForBasicBlocks));
 }
 
 int JIT::runMethodCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *code, 
@@ -2003,6 +2085,13 @@ int JIT::runMethodCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *cod
         jit_prolog();
         jit_sti ((jit_pointer_t)stackPointerMem, JIT_FP);
         convertCode (vectorArgs, code);
+        for (int i = 0; i < vectorBasicBlocks.size (); i++)
+        {
+            printf ("i %d start %d end %d\n", i,
+                    vectorBasicBlocks[i]->startInstrIndex,
+                    vectorBasicBlocks[i]->length);
+        }
+        
         //printf ("RUNNING CODE\n");
         //jit_node_t *jump;
         //jit_movi (JIT_R0, 10);
@@ -2034,5 +2123,9 @@ int JIT::runMethodCode (vector<VariableDescriptor*>* vectorArgs, MethodCode *cod
 
     compiledFunction();
 
-    return 0;
+for (int i = 0; i < vectorBasicBlocks.size (); i++)
+        {
+            printf ("i %d execution count %d\n", i,
+                    vectorBasicBlocks[i]->executionCount);
+        }    return 0;
 }

@@ -7,6 +7,7 @@ extern "C"
 #include <map>
 
 #include "classinfo.h"
+#include "basic_block.h"
 
 #ifndef __JIT_H__
 #define __JIT_H__
@@ -249,6 +250,7 @@ class JIT
         vector <LocalDescriptor*> vectorLocalDescriptors;
         vector <TempDescriptor*> vectorTempDescriptors;
         vector<VariableDescriptor*>* vectorArgs;
+        vector<BasicBlock*> vectorBasicBlocks;
         long* argsMemLocation;
         map <string, JITLabel*> mapLabels;
         unsigned long *stackPointerMem;
@@ -271,6 +273,8 @@ class JIT
         }
 
         compiledFunctionSig compiledFunction;
+        unsigned long memForBasicBlocks;
+        void endBasicBlock (int& startBlockInstr, int& endBlockInstr, Instruction* instr);
 
     public:
         JIT ();

@@ -8,6 +8,8 @@ LeopardVM_SOURCES = src/allocatedObject.h \
  src/classinfo.h \
  src/gc.cpp \
  src/gc.h \
+ src/basic_block.h \
+ src/basic_block.cpp \
  src/info.cpp \
  src/jit.cpp \
  src/jit.h \

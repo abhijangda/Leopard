@@ -95,8 +95,9 @@ am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__dirstamp = $(am__leading_dot)dirstamp
 am_LeopardVM_OBJECTS = src/LeopardVM-classinfo.$(OBJEXT) \
-	src/LeopardVM-gc.$(OBJEXT) src/LeopardVM-info.$(OBJEXT) \
-	src/LeopardVM-jit.$(OBJEXT) src/LeopardVM-stack.$(OBJEXT) \
+	src/LeopardVM-gc.$(OBJEXT) src/LeopardVM-basic_block.$(OBJEXT) \
+	src/LeopardVM-info.$(OBJEXT) src/LeopardVM-jit.$(OBJEXT) \
+	src/LeopardVM-stack.$(OBJEXT) \
 	src/LeopardVM-heapallocator.$(OBJEXT) \
 	src/LeopardVM-main.$(OBJEXT) \
 	src/LeopardVM-memberinfo.$(OBJEXT) \
@@ -284,10 +285,13 @@ top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS}
 AM_CPPFLAGS = $(DEPS_CFLAGS)
-LeopardVM_SOURCES = src/classinfo.cpp \
+LeopardVM_SOURCES = src/allocatedObject.h \
+ src/classinfo.cpp \
  src/classinfo.h \
  src/gc.cpp \
  src/gc.h \
+ src/basic_block.h \
+ src/basic_block.cpp \
  src/info.cpp \
  src/jit.cpp \
  src/jit.h \
@@ -396,6 +400,8 @@ src/LeopardVM-classinfo.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/LeopardVM-gc.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/LeopardVM-basic_block.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 src/LeopardVM-info.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/LeopardVM-jit.$(OBJEXT): src/$(am__dirstamp) \
@@ -426,6 +432,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/LeopardVM-basic_block.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/LeopardVM-classinfo.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/LeopardVM-gc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/LeopardVM-heapallocator.Po@am__quote@
@@ -481,6 +488,20 @@ src/LeopardVM-gc.obj: src/gc.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/gc.cpp' object='src/LeopardVM-gc.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(LeopardVM_CXXFLAGS) $(CXXFLAGS) -c -o src/LeopardVM-gc.obj `if test -f 'src/gc.cpp'; then $(CYGPATH_W) 'src/gc.cpp'; else $(CYGPATH_W) '$(srcdir)/src/gc.cpp'; fi`
+
+src/LeopardVM-basic_block.o: src/basic_block.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(LeopardVM_CXXFLAGS) $(CXXFLAGS) -MT src/LeopardVM-basic_block.o -MD -MP -MF src/$(DEPDIR)/LeopardVM-basic_block.Tpo -c -o src/LeopardVM-basic_block.o `test -f 'src/basic_block.cpp' || echo '$(srcdir)/'`src/basic_block.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/LeopardVM-basic_block.Tpo src/$(DEPDIR)/LeopardVM-basic_block.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/basic_block.cpp' object='src/LeopardVM-basic_block.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(LeopardVM_CXXFLAGS) $(CXXFLAGS) -c -o src/LeopardVM-basic_block.o `test -f 'src/basic_block.cpp' || echo '$(srcdir)/'`src/basic_block.cpp
+
+src/LeopardVM-basic_block.obj: src/basic_block.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(LeopardVM_CXXFLAGS) $(CXXFLAGS) -MT src/LeopardVM-basic_block.obj -MD -MP -MF src/$(DEPDIR)/LeopardVM-basic_block.Tpo -c -o src/LeopardVM-basic_block.obj `if test -f 'src/basic_block.cpp'; then $(CYGPATH_W) 'src/basic_block.cpp'; else $(CYGPATH_W) '$(srcdir)/src/basic_block.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/LeopardVM-basic_block.Tpo src/$(DEPDIR)/LeopardVM-basic_block.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/basic_block.cpp' object='src/LeopardVM-basic_block.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(LeopardVM_CXXFLAGS) $(CXXFLAGS) -c -o src/LeopardVM-basic_block.obj `if test -f 'src/basic_block.cpp'; then $(CYGPATH_W) 'src/basic_block.cpp'; else $(CYGPATH_W) '$(srcdir)/src/basic_block.cpp'; fi`
 
 src/LeopardVM-info.o: src/info.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(LeopardVM_CXXFLAGS) $(CXXFLAGS) -MT src/LeopardVM-info.o -MD -MP -MF src/$(DEPDIR)/LeopardVM-info.Tpo -c -o src/LeopardVM-info.o `test -f 'src/info.cpp' || echo '$(srcdir)/'`src/info.cpp

@@ -142,7 +142,19 @@ class MethodCode
         
     public:
         MethodCode (vector<Local*>, vector<Instruction*>);
-        //MethodCode ();
+        ~MethodCode ()
+        {
+            for (int i = 0; i < vectorLocals.size (); i++)
+            {
+                delete vectorLocals[i];
+            }
+        
+            for (int i = 0; i < vectorInstructions.size (); i++)
+            {
+                delete vectorInstructions[i];
+            }
+        }
+
         void addLocal (Local& local);
         void addInstruction (Instruction& instruction);
         int getTotalLocals ()
@@ -190,6 +202,11 @@ class MethodInfo : public MemberInfo
         {
             return code;
         }
+    
+        ~MethodInfo ()
+        {
+            delete code;
+        }
 };
 
 class ClassInfo
@@ -209,6 +226,19 @@ class ClassInfo
         ClassInfo (string _name, int _size, ClassInfo* _parent, vector <MemberInfo*> vMemInfo,
                    vector <MethodInfo*> vMethInfo);
         
+        ~ClassInfo ()
+        {
+            for (int i = 0; i < vectorMembers.size (); i++)
+            {
+                delete vectorMembers[i];
+            }
+            
+            for (int i = 0; i < vectorMethods.size (); i++)
+            {
+                delete vectorMethods[i];
+            }
+        }
+
         void addChildClass (ClassInfo* child)
         {
             listChildren.push_back (child);

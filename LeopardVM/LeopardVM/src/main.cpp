@@ -20,7 +20,7 @@ int main (int argc, char *argv[])
     string s (filename);
     init_jit(argv[0]);
     ptrVM->start (s);
-    delete ptrVM;
+    //delete ptrVM;
 
     return 0;
 }
